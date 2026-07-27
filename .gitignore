@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# editor/OS cruft
+*.swp
+Thumbs.db
+
+# logs from the local server / monitor
+*.log

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Royal Casino — Play for Fun</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- bump ?v= on each release so browsers never serve stale assets -->
+  <link rel="stylesheet" href="css/styles.css?v=20" />
+</head>
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="brand" data-nav="lobby">
+      <span class="brand-mark">♠</span>
+      <span class="brand-name">ROYAL<span class="brand-accent">CASINO</span></span>
+    </div>
+
+    <nav class="topnav" id="topnav">
+      <button class="nav-link" data-nav="lobby">Lobby</button>
+      <div class="nav-dd">
+        <button class="nav-link nav-dd-btn" id="gamesMenuBtn" aria-haspopup="true">Games <span class="nav-caret">▾</span></button>
+        <div class="nav-menu" id="gamesMenu"></div>
+      </div>
+      <button class="nav-link" data-nav="aiguide">🤖 Guide</button>
+    </nav>
+
+    <div class="wallet">
+      <div class="wallet-chip">
+        <span class="wallet-icon">💵</span>
+        <span class="wallet-cur">$</span>
+        <span class="wallet-amount" id="walletAmount">0</span>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="cheatBtn" title="Rig the odds in your favor">😈</button>
+        <button class="icon-btn" id="muteBtn" title="Toggle sound">🔊</button>
+        <button class="icon-btn" id="resetBtn" title="Reset your balance">↺</button>
+      </div>
+      <button class="btn btn-sm" id="addFundsBtn" title="Add simulated cash">+ Cash</button>
+    </div>
+  </header>
+
+  <main id="view" class="view"><!-- rendered by JS --></main>
+
+  <footer class="footer">
+    <span>Royal Casino · play-money demo · simulated dollars only, no real currency</span>
+  </footer>
+
+  <!-- Toasts -->
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <!-- Scripts -->
+  <script src="js/core.js?v=20"></script>
+  <script src="js/games/slots.js?v=20"></script>
+  <script src="js/games/gems.js?v=20"></script>
+  <script src="js/games/blackjack.js?v=20"></script>
+  <script src="js/games/videopoker.js?v=20"></script>
+  <script src="js/games/roulette.js?v=20"></script>
+  <script src="js/games/dice.js?v=20"></script>
+  <script src="js/games/mines.js?v=20"></script>
+  <script src="js/games/crash.js?v=20"></script>
+  <script src="js/games/limbo.js?v=20"></script>
+  <script src="js/games/plinko.js?v=20"></script>
+  <script src="js/games/hilo.js?v=20"></script>
+  <script src="js/games/tower.js?v=20"></script>
+  <script src="js/games/wheel.js?v=20"></script>
+  <script src="js/app.js?v=20"></script>
+  <!-- AI agent harness (optional; safe to remove) -->
+  <script src="js/agent/harness.js?v=20"></script>
+  <script src="js/agent/agent-ui.js?v=20"></script>
+  <script src="js/agent/agent-report.js?v=20"></script>
+  <script src="js/agent/agent-lab.js?v=20"></script>
+</body>
+</html>
