@@ -187,10 +187,18 @@ const VideoPokerGame = (() => {
       hand = [draw(), draw(), draw(), draw(), draw()];
       held = [false, false, false, false, false];
       phase = "draw";
-      highlightRow(null);
       renderHand(false);
-      resultEl.textContent = "Hold cards, then Draw.";
-      resultEl.style.color = "var(--gold-2)";
+      // Show what was dealt so a made hand is obvious — hold it before drawing!
+      const dealt = evaluate(hand);
+      if (dealt) {
+        highlightRow(dealt.key);
+        resultEl.textContent = `Dealt ${dealt.label} — HOLD these cards, then Draw to keep it.`;
+        resultEl.style.color = "var(--green)";
+      } else {
+        highlightRow(null);
+        resultEl.textContent = "Hold the cards you want, then Draw.";
+        resultEl.style.color = "var(--gold-2)";
+      }
       dealBtn.disabled = true;
       drawBtn.disabled = false;
     }

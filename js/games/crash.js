@@ -16,8 +16,13 @@ const CrashGame = (() => {
     return Math.max(1.0, Math.floor(raw * 100) / 100);
   }
 
+  // Accelerating climb: gentle creep at the start, then it takes off. The 1.5
+  // power on the time makes early growth slower and later growth faster than a
+  // plain exponential. (Pacing only — the crash point is drawn independently, so
+  // fairness is unchanged.)
   function liveMultiplier(elapsedMs) {
-    return Math.pow(2, elapsedMs / MS_PER_DOUBLING);
+    const x = Math.max(0, elapsedMs) / MS_PER_DOUBLING;
+    return Math.pow(2, Math.pow(x, 1.5));
   }
 
   function render(view) {
@@ -135,6 +140,26 @@ const CrashGame = (() => {
       ctx2d.beginPath();
       points.forEach((p, i) => (i ? ctx2d.lineTo(x(p.t), y(p.m)) : ctx2d.moveTo(x(p.t), y(p.m))));
       ctx2d.stroke();
+
+      // Rocket riding the tip of the line on the way up; 💥 at the crash point.
+      const tip = points[points.length - 1];
+      const tx = x(tip.t), ty = y(tip.m);
+      ctx2d.textAlign = "center";
+      ctx2d.textBaseline = "middle";
+      if (state === "running") {
+        // tilt the rocket along the current slope so it "flies"
+        const prev = points[points.length - 2] || tip;
+        const ang = Math.atan2(y(tip.m) - y(prev.m), x(tip.t) - x(prev.t));
+        ctx2d.save();
+        ctx2d.translate(tx, ty);
+        ctx2d.rotate(ang + Math.PI / 4); // 🚀 points up-right by default
+        ctx2d.font = "22px serif";
+        ctx2d.fillText("🚀", 0, 0);
+        ctx2d.restore();
+      } else if (state === "crashed" && !cashedOut) {
+        ctx2d.font = "22px serif";
+        ctx2d.fillText("💥", tx, ty);
+      }
     }
 
     function updatePotential() {
