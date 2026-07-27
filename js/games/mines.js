@@ -25,6 +25,7 @@ const MinesGame = (() => {
       <div class="page-head">
         <h2 class="page-title">💣 Mines</h2>
         <p class="page-sub">Uncover gems to grow your multiplier. Hit a mine and you lose the bet. Cash out any time.</p>
+        ${Casino.helpBtnHTML("minesHelp")}
       </div>
       <div class="game-layout">
         <div class="panel">
@@ -61,6 +62,13 @@ const MinesGame = (() => {
     const msg = view.querySelector("#minesMsg");
 
     Casino.wireBet(view);
+    view.querySelector("#minesHelp").addEventListener("click", () => Casino.openHowTo("How to play — Mines", `
+      <h4>Goal</h4>
+      <p>A 5×5 grid hides a number of <b>mines</b> you choose (more mines = higher risk and reward). Tap tiles to reveal <b>gems</b>. Every gem you find raises your multiplier.</p>
+      <h4>Cash out before you bust</h4>
+      <p>The more gems you uncover, the bigger the payout — but hit a single mine and you <b>lose the whole bet</b>. The <b>Next tile</b> stat shows what your multiplier becomes if the next pick is safe. Press <b>Cash Out</b> to bank your winnings whenever you like.</p>
+      <h4>Odds</h4>
+      <p>Each safe pick is genuinely random and priced at fair odds minus a small house edge. Fewer mines means safer, slower growth; more mines means fast, spiky multipliers.</p>`));
 
     function buildGrid() {
       grid.innerHTML = "";

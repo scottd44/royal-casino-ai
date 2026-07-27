@@ -48,6 +48,7 @@ const TowerGame = (() => {
       <div class="page-head">
         <h2 class="page-title">🗼 Tower</h2>
         <p class="page-sub">Climb from the bottom. Pick a safe tile on each row to rise and grow your multiplier — one mine ends the run. Cash out any time.</p>
+        ${Casino.helpBtnHTML("towerHelp")}
       </div>
       <div class="game-layout">
         <div class="panel">
@@ -85,6 +86,13 @@ const TowerGame = (() => {
     const msg = view.querySelector("#towerMsg");
 
     Casino.wireBet(view);
+    view.querySelector("#towerHelp").addEventListener("click", () => Casino.openHowTo("How to play — Tower", `
+      <h4>Goal</h4>
+      <p>Climb the tower one row at a time. Each row has a few tiles, some <b>safe</b> and some <b>mines</b>. Pick a safe tile to rise to the next row and grow your multiplier.</p>
+      <h4>Difficulty</h4>
+      <p>Easier levels have more safe tiles per row (safer, smaller steps); harder levels have fewer safe tiles (riskier, bigger multiplier jumps). The <b>Next row</b> stat previews your multiplier if the next pick is safe.</p>
+      <h4>Cash out</h4>
+      <p>Hit a mine and the run ends — you lose the bet. Press <b>Cash Out</b> at any height to lock in your current multiplier.</p>`));
 
     // Build the tower with the TOP row first so row 0 sits at the bottom.
     function buildGrid() {

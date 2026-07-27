@@ -43,6 +43,7 @@ const HiloGame = (() => {
       <div class="page-head">
         <h2 class="page-title">🔼 Hilo</h2>
         <p class="page-sub">Will the next card be higher or lower? Ace is low. A tie wins either way. Chain correct calls for a bigger multiplier and cash out any time.</p>
+        ${Casino.helpBtnHTML("hiloHelp")}
       </div>
       <div class="game-layout">
         <div class="panel">
@@ -84,6 +85,13 @@ const HiloGame = (() => {
     const msg = view.querySelector("#hiloMsg");
 
     Casino.wireBet(view);
+    view.querySelector("#hiloHelp").addEventListener("click", () => Casino.openHowTo("How to play — Hilo", `
+      <h4>Goal</h4>
+      <p>A card is shown face-up. Call whether the <b>next</b> card will be <b>higher</b> or <b>lower</b>. Ace is low, King is high, and a <b>tie wins</b> either way.</p>
+      <h4>Building a multiplier</h4>
+      <p>Each correct call multiplies your payout by the true odds of that call (minus a small house edge) — the more cards that would beat you, the bigger the jump. Correct calls <b>chain</b>, so your multiplier keeps climbing.</p>
+      <h4>Cashing out</h4>
+      <p>Bank your current multiplier at any time with <b>Cash Out</b>. But one wrong call loses the whole bet — so don't get greedy.</p>`));
 
     function drawCurrent() {
       view.querySelector("#hiloCard").innerHTML = cardHTML(current);

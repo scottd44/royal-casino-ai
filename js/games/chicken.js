@@ -1,10 +1,9 @@
 /* ============================================================
    Chicken Road — cross lane by lane, cash out before a car hits
    ------------------------------------------------------------
-   Each lane crossed multiplies your payout; every step has a crash
-   chance. Multiplier after L lanes = 0.99 × (1/survival)^L, so each
-   step is fair (EV 1) with the 1% edge applied once → 99% RTP at any
-   cash-out point. Difficulty sets survival-per-lane and payout growth.
+   Camera-follow presentation: the chicken stays centered while the
+   road scrolls under it (you can see a few lanes ahead), like the
+   crypto-casino version. Fair per-step (EV 1, 1% edge once → ~99% RTP).
    ============================================================ */
 const ChickenGame = (() => {
   const HOUSE_EDGE = 0.99;
@@ -14,14 +13,14 @@ const ChickenGame = (() => {
     hard:      { label: "Hard",      steps: 11, surv: 0.72 },
     daredevil: { label: "Daredevil", steps: 9,  surv: 0.55 },
   };
-  const CARS = ["🚗", "🚙", "🚕", "🚌", "🏎️", "🚓"];
+  const CAR_COLORS = ["#e0463f", "#e6a13a", "#4d8cff", "#9d6bff", "#3ecf8e", "#e05a9c", "#22d3ee"];
 
   let diff = "easy";
-  let lanes = [];        // lane DOM refs
-  let crossed = 0;       // lanes safely crossed
+  let lanes = [];
+  let crossed = 0;
   let bet = 0;
   let active = false;
-  let busy = false;      // mid-hop animation lock
+  let busy = false;
 
   const multAfter = (L, d) => (L <= 0 ? 1 : HOUSE_EDGE * Math.pow(1 / d.surv, L));
 
@@ -33,7 +32,11 @@ const ChickenGame = (() => {
       </div>
       <div class="game-layout">
         <div class="panel">
-          <div class="chk-road" id="chkRoad"></div>
+          <div class="chk-stage" id="chkStage">
+            <div class="chk-track" id="chkTrack"></div>
+            <div class="chk-fade chk-fade-l"></div>
+            <div class="chk-fade chk-fade-r"></div>
+          </div>
           <div class="win-banner" id="chkMsg" style="margin-top:16px;">Choose a difficulty and press Start.</div>
         </div>
 
@@ -58,56 +61,68 @@ const ChickenGame = (() => {
         </div>
       </div>`;
 
-    const road = view.querySelector("#chkRoad");
+    const stage = view.querySelector("#chkStage");
+    const track = view.querySelector("#chkTrack");
     const betInput = view.querySelector("#betInput");
     const diffSelect = view.querySelector("#chkDiff");
     const startBtn = view.querySelector("#chkStart");
     const crossBtn = view.querySelector("#chkCross");
     const cashBtn = view.querySelector("#chkCash");
     const msg = view.querySelector("#chkMsg");
-    let chicken;
+    let chicken, startCurb;
 
     Casino.wireBet(view);
 
+    function carHTML(laneIdx) {
+      const col = CAR_COLORS[laneIdx % CAR_COLORS.length];
+      const delay = (-Math.random() * 3).toFixed(2);
+      const dur = (1.7 + Math.random() * 1.7).toFixed(2);
+      return `<div class="chk-car" style="--car:${col};animation-delay:${delay}s;animation-duration:${dur}s"></div>`;
+    }
+
     function buildRoad() {
       const d = DIFFS[diff];
-      road.innerHTML = "";
-      // Start curb (grass)
-      const curb = Casino.el("div", "chk-curb chk-start", `<span class="chk-home">🏠</span>`);
-      road.appendChild(curb);
-      // Lanes
+      track.innerHTML = "";
+      startCurb = Casino.el("div", "chk-curb chk-start", `<span class="chk-home">🏁</span>`);
+      track.appendChild(startCurb);
       lanes = [];
       for (let i = 1; i <= d.steps; i++) {
         const lane = Casino.el("div", "chk-lane");
         lane.dataset.lane = i;
-        const car = CARS[Math.floor(Math.random() * CARS.length)];
         lane.innerHTML =
           `<div class="chk-mult">${multAfter(i, d).toFixed(2)}×</div>` +
-          `<div class="chk-car" style="animation-delay:${(-Math.random() * 3).toFixed(2)}s;animation-duration:${(1.6 + Math.random() * 1.6).toFixed(2)}s">${car}</div>`;
+          carHTML(i) + carHTML(i + 3);
         lane.addEventListener("click", () => { if (active && !busy && Number(lane.dataset.lane) === crossed + 1) cross(); });
-        road.appendChild(lane);
+        track.appendChild(lane);
         lanes.push(lane);
       }
-      // Finish curb (prize)
       const fin = Casino.el("div", "chk-curb chk-finish", `<span class="chk-home">🏆</span>`);
-      road.appendChild(fin);
-      // Chicken
+      track.appendChild(fin);
       chicken = Casino.el("div", "chk-chicken", "🐔");
-      road.appendChild(chicken);
-      requestAnimationFrame(() => moveChickenTo(curb));
+      track.appendChild(chicken);
+      // place instantly at the start (no slide / camera glide)
+      requestAnimationFrame(() => {
+        track.style.transition = "none";
+        chicken.style.transition = "none";
+        moveTo(startCurb, false);
+        requestAnimationFrame(() => { track.style.transition = ""; chicken.style.transition = ""; });
+      });
     }
 
-    function laneCenter(el) {
-      return el.offsetLeft + el.offsetWidth / 2 - chicken.offsetWidth / 2;
+    // Center `el` in the viewport by sliding the whole track (camera-follow).
+    function moveTo(el, hop) {
+      if (!el || !chicken) return;
+      const cx = el.offsetLeft + el.offsetWidth / 2;
+      chicken.style.left = (cx - chicken.offsetWidth / 2) + "px";
+      const viewW = stage.clientWidth, trackW = track.scrollWidth;
+      const cam = Math.max(Math.min(0, viewW - trackW), viewW / 2 - cx);
+      track.style.transform = `translateX(${cam}px)`;
+      if (hop) { chicken.classList.remove("hop"); void chicken.offsetWidth; chicken.classList.add("hop"); }
     }
-    function moveChickenTo(el, hop) {
-      chicken.style.left = laneCenter(el) + "px";
-      if (hop) {
-        chicken.classList.remove("hop");
-        void chicken.offsetWidth; // restart animation
-        chicken.classList.add("hop");
-      }
-      el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+
+    function markNext() {
+      lanes.forEach((l) => l.classList.remove("chk-next"));
+      if (active && lanes[crossed]) lanes[crossed].classList.add("chk-next");
     }
 
     function updateStats() {
@@ -117,9 +132,7 @@ const ChickenGame = (() => {
       view.querySelector("#curMult").textContent = cur.toFixed(2) + "×";
       view.querySelector("#nextMult").textContent = active ? multAfter(crossed + 1, d).toFixed(2) + "×" : "—";
       view.querySelector("#cashVal").textContent = active && crossed > 0 ? Casino.fmt(Math.floor(bet * cur)) : "—";
-      // Glow the next lane the chicken can hop into.
-      lanes.forEach((l) => l.classList.remove("chk-next"));
-      if (active && lanes[crossed]) lanes[crossed].classList.add("chk-next");
+      markNext();
     }
 
     function setControls() {
@@ -147,16 +160,15 @@ const ChickenGame = (() => {
       if (!active || busy) return;
       const d = DIFFS[diff];
       let safe = Math.random() < d.surv;
-      if (Casino.cheat.win()) safe = true; // rigged: no car this time
+      if (Casino.cheat.win()) safe = true;
       busy = true;
       setControls();
-
-      const targetLane = lanes[crossed]; // lane index crossed+1 (0-based array)
+      const targetLane = lanes[crossed];
       if (safe) {
         crossed++;
-        moveChickenTo(targetLane, true);
-        Casino.sound.play("tick");
+        moveTo(targetLane, true);
         targetLane.classList.add("cleared");
+        Casino.sound.play("tick");
         setTimeout(() => {
           busy = false;
           updateStats();
@@ -164,26 +176,25 @@ const ChickenGame = (() => {
           setControls();
           msg.textContent = `Lane ${crossed} cleared — ${multAfter(crossed, d).toFixed(2)}×. Keep going or cash out.`;
           msg.style.color = "var(--gold-2)";
-        }, 360);
+        }, 380);
       } else {
-        // Crash — a car slams into the lane the chicken steps into.
-        moveChickenTo(targetLane, true);
+        moveTo(targetLane, true);
         targetLane.classList.add("crash");
         setTimeout(() => {
           chicken.classList.add("splat");
           chicken.textContent = "💥";
           Casino.sound.play("lose");
           endLoss();
-        }, 300);
+        }, 320);
       }
     }
 
     function endLoss() {
-      active = false;
-      busy = false;
+      active = false; busy = false;
       msg.textContent = `💥 Splat! A car got you on lane ${crossed + 1}. Lost ${Casino.money(bet)}.`;
       msg.style.color = "var(--red)";
       lanes.forEach((l, i) => { if (i >= crossed) l.classList.add("dim"); });
+      markNext();
       setControls();
       updateStats();
     }
@@ -198,17 +209,13 @@ const ChickenGame = (() => {
         ? `🏆 Made it across! ${mult.toFixed(2)}× — +${Casino.fmt(winnings - bet)}!`
         : `Cashed out ${mult.toFixed(2)}× — +${Casino.fmt(winnings - bet)} profit!`;
       msg.style.color = "var(--green)";
+      markNext();
       setControls();
       view.querySelector("#cashVal").textContent = "—";
     }
-
     function finishWin() { payAndEnd(multAfter(DIFFS[diff].steps, DIFFS[diff]), true); }
-
     function cashOut() {
-      if (!active || busy || crossed === 0) {
-        Casino.toast("Cross at least one lane before cashing out.", "info");
-        return;
-      }
+      if (!active || busy || crossed === 0) { Casino.toast("Cross at least one lane before cashing out.", "info"); return; }
       payAndEnd(multAfter(crossed, DIFFS[diff]), false);
     }
 
@@ -216,7 +223,7 @@ const ChickenGame = (() => {
     startBtn.addEventListener("click", start);
     crossBtn.addEventListener("click", cross);
     cashBtn.addEventListener("click", cashOut);
-    window.addEventListener("resize", () => { if (chicken) moveChickenTo(lanes[crossed - 1] || road.querySelector(".chk-start")); });
+    window.addEventListener("resize", () => { moveTo(active && crossed > 0 ? lanes[crossed - 1] : startCurb, false); });
 
     buildRoad();
     updateStats();

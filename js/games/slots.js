@@ -43,6 +43,7 @@ const SlotsGame = (() => {
       <div class="page-head">
         <h2 class="page-title">🎰 Lucky Sevens Slots</h2>
         <p class="page-sub">Match symbols across the payline. Three-of-a-kind pays big.</p>
+        ${Casino.helpBtnHTML("slotsHelp")}
       </div>
       <div class="game-layout">
         <div class="panel">
@@ -89,6 +90,13 @@ const SlotsGame = (() => {
     let bestWin = 0;
 
     Casino.wireBet(view);
+    view.querySelector("#slotsHelp").addEventListener("click", () => Casino.openHowTo("How to play — Lucky Sevens Slots", `
+      <h4>Goal</h4>
+      <p>Set a bet and <b>Spin</b>. The three reels stop on a single <b>payline</b> across the middle. Match symbols on that line to win.</p>
+      <h4>Payouts</h4>
+      <p><b>Three of a kind</b> pays the most — triple 7️⃣ is the top jackpot at 60×. Any <b>matching pair</b> pays a smaller amount. The full paytable is shown right on the machine.</p>
+      <h4>Odds</h4>
+      <p>Every spin is independent and random. The reel weightings and paytable together give a fixed long-run return, so there's no "due" machine — just spin and enjoy the variance.</p>`));
 
     function setReel(reelEl, sym) {
       reelEl.querySelector(".reel-strip").innerHTML = `<span>${sym.s}</span>`;

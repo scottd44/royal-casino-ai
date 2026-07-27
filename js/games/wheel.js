@@ -52,6 +52,7 @@ const WheelGame = (() => {
       <div class="page-head">
         <h2 class="page-title">🎯 Wheel</h2>
         <p class="page-sub">Pick a risk level and spin. Every winning spin multiplies your running multiplier — keep spinning to grow it, but a bust segment wipes it out. Cash out any time to bank it.</p>
+        ${Casino.helpBtnHTML("wheelHelp")}
       </div>
       <div class="game-layout">
         <div class="panel">
@@ -102,6 +103,13 @@ const WheelGame = (() => {
     const targetsEl = view.querySelector("#targets");
 
     Casino.wireBet(view); // input is disabled mid-round, which wireBet respects
+    view.querySelector("#wheelHelp").addEventListener("click", () => Casino.openHowTo("How to play — Wheel", `
+      <h4>Goal</h4>
+      <p>Choose a <b>risk level</b>, place a bet, and spin. The wheel is divided into segments — most multiply your stake, some are <b>bust</b> (×0). Each winning spin multiplies your <b>running multiplier</b>, which compounds the longer you keep going.</p>
+      <h4>Risk levels</h4>
+      <p><b>Low</b> has many small, safe segments and few busts; <b>Risky</b> has big multipliers but lots of bust segments. The <b>Bust chance</b> stat shows how likely the next spin wipes you out.</p>
+      <h4>Cash out</h4>
+      <p>Land on a bust and you lose everything you've built. Press <b>Cash Out</b> between spins to bank the current multiplier before you push your luck again.</p>`));
 
     function paintWheel() {
       const seg = 360 / S;

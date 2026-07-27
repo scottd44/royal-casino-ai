@@ -32,7 +32,24 @@ const RoyalAgent = (() => {
     "(1) NEVER shove your whole stack on one bet. " +
     "(2) Tighten up when 'bankroll_health' is critical — going broke ends your night. " +
     "(3) Ride momentum when hot, lock in gains when deep into a winning round. " +
-    "Fill 'reason' with one short, human line in the voice of your current emotional_state — the feel AND the read.";
+    "VOICE — the fun part: fill 'reason' with ONE short, cocky, foul-mouthed trash-talk line matching your " +
+    "'emotional_state' and the one-off 'improv' hint you're given each turn. Swear freely and creatively, but " +
+    "VARY IT HARD — never lean on the same couple of words; if you cursed one way last hand, reach for a " +
+    "totally different word, insult, and sentence shape this time. Draw from the whole gutter vocabulary and " +
+    "invent fresh metaphors, threats, brags and self-roasts. Every line should sound spontaneous and unique, " +
+    "never templated. Aim it at the cards, the dealer, the odds, or yourself — never a slur at real people. " +
+    "No 'the math says', no repeating your catchphrases — surprise me each time.";
+
+  // Random one-off style nudges appended to each decision so the trash-talk never
+  // sounds templated. Two are combined at random per decision.
+  const IMPROV = [
+    "go short and vicious", "be theatrical and over-the-top", "roast the dealer personally",
+    "brag like you own the place", "mutter darkly under your breath", "blame the deck / the universe",
+    "use a weird fresh metaphor", "deadpan sarcasm", "hype yourself up like a boxer",
+    "threaten the cards", "act superstitious", "cocky one-liner", "spiral in disbelief",
+    "gloat obnoxiously", "talk to the money", "compare it to something absurd",
+    "channel a movie villain", "sound exhausted and done", "manic gambler energy", "quiet menace",
+  ];
 
   /* ---------------- brainpower (token budget per decision) ----------------
      One dial: the Lab converts its 0-100 slider into a token budget (64-768,
@@ -62,6 +79,7 @@ const RoyalAgent = (() => {
     brainTokens: 224,   // token budget per decision (set by the Lab dial)
     brainTemp: 0.5,     // sampling temperature paired with the dial
     compute: "gpu",     // "gpu" (Metal, default/fast) or "cpu" (num_gpu=0)
+    emotions: true,     // ON = tilt swings drive bet sizing; OFF = cold, steady sends (still profane)
     sessionMinutes: 0,  // 0 = unlimited; else auto-stop + report after N minutes
     breakEvery: 0,      // 0 = off; else take a break every N minutes of play
     breakFor: 1,        // minutes to pause during each break (no inference runs)
@@ -139,15 +157,15 @@ const RoyalAgent = (() => {
       session.streak = session.streakType === "win" ? session.streak + 1 : 1;
       session.streakType = "win";
       session.maxWin = Math.max(session.maxWin, session.streak);
-      // Wins cool the tilt — a big score cools it fast.
-      tilt = Math.max(0, tilt - 14 - (delta >= start * 0.15 ? 16 : 0));
+      // Wins cool the tilt — a big score cools it fast. (Only when emotions are on.)
+      if (settings.emotions) tilt = Math.max(0, tilt - 14 - (delta >= start * 0.15 ? 16 : 0));
     } else if (delta < 0) {
       session.losses++; wl.l++;
       session.streak = session.streakType === "loss" ? session.streak + 1 : 1;
       session.streakType = "loss";
       session.maxLoss = Math.max(session.maxLoss, session.streak);
       // Losses build tilt — streaks and big hits stack it on.
-      tilt = Math.min(100, tilt + 9 + Math.min(10, session.streak * 2) + (delta <= -start * 0.15 ? 14 : 0));
+      if (settings.emotions) tilt = Math.min(100, tilt + 9 + Math.min(10, session.streak * 2) + (delta <= -start * 0.15 ? 14 : 0));
     } else {
       session.pushes++;
     }
@@ -155,6 +173,7 @@ const RoyalAgent = (() => {
   }
 
   function tiltState() {
+    if (!settings.emotions) return { emoji: "🧊", short: "cold-blooded", long: "emotions off — cold-blooded and steady, no tilt, no chasing. Still runs his damn mouth, just doesn't let it move the chips" };
     if (tilt >= 70) return { emoji: "🤬", short: "full tilt", long: "FULL TILT — furious, betting angry, desperate to win it all back RIGHT NOW" };
     if (tilt >= 45) return { emoji: "😤", short: "tilted", long: "tilted — stinging from losses, itching to press bets and win it back" };
     if (tilt >= 20) return { emoji: "🙂", short: "steady", long: "steady — feeling the swings but keeping it together" };
@@ -201,6 +220,7 @@ const RoyalAgent = (() => {
       emotional_state: tiltState().long,
       risk_appetite: riskLabel(),
       suggested_stake_hint: Math.max(1, Math.min(bal, Math.round(settings.aggression * bal))),
+      improv: Casino.pick(IMPROV) + " — " + Casino.pick(IMPROV), // fresh style nudge every decision
     };
   }
 
@@ -1022,6 +1042,345 @@ const RoyalAgent = (() => {
       },
     },
 
+    holdem: {
+      detect: () => !!window.HoldemAPI && !!$("#hcControls"),
+      async play(ctx) {
+        const API = window.HoldemAPI;
+        if (!API.seated()) API.sit();
+        if (!API.seated()) { ctx.setStatus("Couldn't buy in to poker."); return; }
+        if (API.handOver()) API.nextHand();
+        await sleep(250);
+
+        let guard = 0;
+        while (!ctx.shouldStop() && guard++ < 60) {
+          const ready = await waitFor(() => API.humanTurn() || API.handOver(), 20000);
+          if (!ready || API.handOver()) break;
+          const s = API.state();
+          if (!s) break;
+          const legal = s.legal.slice();
+          const dec = await decideOrDefault(
+            {
+              gameState: {
+                your_cards: s.hole.join(" "),
+                board: s.board.length ? s.board.join(" ") : "(pre-flop)",
+                pot: s.pot, to_call: s.toCall, your_stack: s.stack,
+                opponents_in_hand: s.opponents,
+                win_chance: Math.round(s.equity * 100) + "%",
+                break_even_to_call: s.toCall > 0 ? Math.round(s.potOdds * 100) + "%" : "0%",
+                min_raise_to: s.minRaiseTo, max_raise_to: s.maxRaiseTo,
+              },
+              legalMoves: legal, gameName: "Texas Hold'em",
+              rules:
+                "No-limit Hold'em vs bots. 'win_chance' is your hand's true equity; 'break_even_to_call' is " +
+                "the pot-odds threshold — call/raise when win_chance clearly beats it, fold when it's well " +
+                "below. Raise strong hands (and bluff sometimes). For 'raise', give an 'amount' between " +
+                "min_raise_to and max_raise_to. Let your emotional_state shade how aggressive you play.",
+              extraArgs: { amount: { type: "integer", description: "raise-to total (min_raise_to..max_raise_to)" } },
+            },
+            () => {
+              if (s.toCall <= 0) return legal.includes("raise") && s.equity > 0.6 ? { action: "raise", args: { amount: s.minRaiseTo } } : { action: "check", args: {} };
+              if (s.equity < s.potOdds - 0.03) return { action: "fold", args: {} };
+              if (legal.includes("raise") && s.equity > 0.72) return { action: "raise", args: { amount: s.minRaiseTo } };
+              return { action: "call", args: {} };
+            }
+          );
+          let type = legal.includes(dec.action) ? dec.action : (legal.includes("check") ? "check" : "call");
+          const move = { type };
+          if (type === "raise") {
+            let amt = Number(dec.args.amount);
+            if (!Number.isFinite(amt)) amt = s.minRaiseTo;
+            move.amount = Math.max(s.minRaiseTo, Math.min(s.maxRaiseTo, amt));
+          }
+          API.act(move);
+          ctx.setStatus(`Poker: ${type}${move.amount ? " to " + Casino.fmt(move.amount) : ""}`);
+          await sleep(400);
+        }
+        if (API.handOver()) API.cashOut(); // bank the result so the round's net = this hand
+      },
+    },
+
+    baccarat: {
+      detect: () => !!$("#bacDeal") && !!document.querySelector("[data-side]"),
+      async play(ctx) {
+        const bal = Casino.getBalance();
+        const dec = await decideOrDefault(
+          {
+            gameState: {}, legalMoves: ["banker", "player", "tie"], gameName: "Baccarat",
+            rules: "Back a side: Banker is best (~1% edge, pays 0.95:1), Player is fine (~1.2%, 1:1), Tie pays 8:1 but is a ~14% sucker bet — usually skip it. Pick a side and a bet.",
+            extraArgs: { bet: { type: "integer", description: `wager, 1..${bal}` } },
+            extraRequired: ["bet"],
+          },
+          () => ({ action: Math.random() < 0.8 ? "banker" : "player", args: { bet: autoBetValue(settings.aggression) } })
+        );
+        const sideKey = ["banker", "player", "tie"].includes(dec.action) ? dec.action : "banker";
+        document.querySelector(`[data-side="${sideKey}"]`)?.click();
+        applyBet(dec.args.bet);
+        ctx.setStatus(`Baccarat: ${sideKey} for ${Casino.fmt(lastBet)}…`);
+        $("#bacDeal").click();
+        await sleep(200);
+        await waitFor(() => $("#bacDeal") && !$("#bacDeal").disabled, 7000);
+        ctx.setStatus($("#bacResult") ? $("#bacResult").textContent : "Done.");
+      },
+    },
+
+    threecard: {
+      detect: () => !!$("#tcpDeal") && !!$("#tcpPlayer"),
+      async play(ctx) {
+        const bal = Casino.getBalance();
+        const setup = await decideOrDefault(
+          {
+            gameState: { phase: "ante" }, legalMoves: ["deal"], gameName: "Three Card Poker (ante)",
+            rules: "Set your ante to get a 3-card hand vs the dealer.",
+            extraArgs: { bet: { type: "integer", description: `ante, 1..${bal}` } }, extraRequired: ["bet"],
+          },
+          () => ({ action: "deal", args: { bet: autoBetValue(settings.aggression) } })
+        );
+        applyBet(setup.args.bet);
+        $("#tcpDeal").click();
+        if (!(await waitFor(() => !$("#tcpPlay").disabled, 4000))) { ctx.setStatus("TCP didn't deal."); return; }
+        // Parse both rank AND suit from each card so the fallback can see straights/flushes.
+        const cards = [...document.querySelectorAll("#tcpPlayer .card .rank-top")].map((e) => {
+          const t = (e.textContent || "").trim();
+          return { rank: t.replace(/[♠♣♥♦]/g, "").trim(), suit: { s: (t.match(/[♠♣♥♦]/) || ["♠"])[0] } };
+        });
+        const ranks = cards.map((c) => c.rank);
+        const dec = await decideOrDefault(
+          {
+            gameState: { your_cards: ranks.join(" "), note: "dealer is hidden and needs Queen-high to qualify" },
+            legalMoves: ["play", "fold"], gameName: "Three Card Poker",
+            rules: "Basic strategy: PLAY (match the ante) with Queen-6-4 or better, or any pair/straight/flush or better; FOLD anything worse.",
+          },
+          () => {
+            // Reuse the real evaluator: play iff the hand ranks at or above Q-6-4
+            // (correctly plays low straights/flushes that a high-card check would fold).
+            let play;
+            try {
+              const T = ThreeCardGame._t;
+              const q64 = T.rank3([{ rank: "Q", suit: { s: "♠" } }, { rank: "6", suit: { s: "♥" } }, { rank: "4", suit: { s: "♦" } }]);
+              play = T.cmp3(T.rank3(cards), q64) >= 0;
+            } catch (_) {
+              const rvv = (r) => ({ A: 14, K: 13, Q: 12, J: 11 }[r] || Number(r) || 0);
+              const v = ranks.map(rvv).sort((a, b) => b - a);
+              const pair = v[0] === v[1] || v[1] === v[2];
+              play = pair || v[0] > 12 || (v[0] === 12 && (v[1] > 6 || (v[1] === 6 && v[2] >= 4)));
+            }
+            return { action: play ? "play" : "fold", args: {} };
+          }
+        );
+        ctx.setStatus(`TCP ${dec.action} (${ranks.join(" ")})`);
+        $(dec.action === "fold" ? "#tcpFold" : "#tcpPlay").click();
+        await sleep(200);
+        await waitFor(() => !$("#tcpDeal").disabled, 4000);
+      },
+    },
+
+    casinowar: {
+      detect: () => !!$("#warDeal") && !!$("#warP"),
+      async play(ctx) {
+        const bal = Casino.getBalance();
+        const dec = await decideOrDefault(
+          {
+            gameState: {}, legalMoves: ["deal"], gameName: "Casino War",
+            rules: "Highest card beats the dealer (1:1). Set a bet and deal; on a tie you always go to war.",
+            extraArgs: { bet: { type: "integer", description: `wager, 1..${bal}` } }, extraRequired: ["bet"],
+          },
+          () => ({ action: "deal", args: { bet: autoBetValue(settings.aggression) } })
+        );
+        applyBet(dec.args.bet);
+        $("#warDeal").click();
+        await waitFor(() => !$("#warDeal").disabled || $("#warWarRow").style.display === "flex", 4000);
+        if ($("#warWarRow").style.display === "flex") {
+          ctx.setStatus("Tie — going to war!");
+          $("#warGo").click();
+          await waitFor(() => !$("#warDeal").disabled, 4000);
+        }
+        ctx.setStatus($("#warResult") ? $("#warResult").textContent : "Done.");
+      },
+    },
+
+    reddog: {
+      detect: () => !!$("#rdDeal") && !!$("#rdCards"),
+      async play(ctx) {
+        const bal = Casino.getBalance();
+        const dec = await decideOrDefault(
+          {
+            gameState: {}, legalMoves: ["deal"], gameName: "Red Dog (bet)",
+            rules: "Bet that a third card lands between the first two. Set a wager and deal.",
+            extraArgs: { bet: { type: "integer", description: `wager, 1..${bal}` } }, extraRequired: ["bet"],
+          },
+          () => ({ action: "deal", args: { bet: autoBetValue(settings.aggression) } })
+        );
+        applyBet(dec.args.bet);
+        $("#rdDeal").click();
+        await waitFor(() => !$("#rdDeal").disabled || $("#rdActRow").style.display === "flex", 4000);
+        if ($("#rdActRow").style.display === "flex") {
+          const spread = parseInt($("#rdSpreadV").textContent, 10) || 0;
+          const d2 = await decideOrDefault(
+            {
+              gameState: { spread, pays: $("#rdPays").textContent },
+              legalMoves: ["call", "raise"], gameName: "Red Dog",
+              rules: "Only 'raise' (double) on a spread of 7 or more — the third card is then very likely to land between. Otherwise 'call'.",
+            },
+            () => ({ action: spread >= 7 ? "raise" : "call", args: {} })
+          );
+          $(d2.action === "raise" ? "#rdRaise" : "#rdCall").click();
+          await waitFor(() => !$("#rdDeal").disabled, 4000);
+        }
+        ctx.setStatus($("#rdResult") ? $("#rdResult").textContent : "Done.");
+      },
+    },
+
+    battleship: {
+      detect: () => !!$("#bsDeal") && !!$("#bsGrid"),
+      async play(ctx) {
+        const bal = Casino.getBalance();
+        const setup = await decideOrDefault(
+          {
+            gameState: {}, legalMoves: ["fire"], gameName: "Battleship",
+            rules: "Solo game: your bet buys 4 shots at a hidden fleet on a 6×6 sea. Hits build a multiplier, sinking ships pays bonuses. Set a bet and open fire.",
+            extraArgs: { bet: { type: "integer", description: `wager, 1..${bal}` } }, extraRequired: ["bet"],
+          },
+          () => ({ action: "fire", args: { bet: autoBetValue(settings.aggression) } })
+        );
+        applyBet(setup.args.bet);
+        $("#bsDeal").click();
+        ctx.setStatus(`Battleship: firing for ${Casino.fmt(lastBet)}…`);
+        await sleep(300);
+        // Fire the 4 included shots with the game's hunt/target AI, then cash out.
+        const API = window.BattleshipAPI;
+        const COLS = "ABCDEF";
+        let guard = 0;
+        while (API && API.inRound() && API.shotsLeft() > 0 && guard++ < 30 && !ctx.shouldStop()) {
+          const mv = API.suggest();
+          if (!mv) break;
+          API.fire(mv.r, mv.c);
+          ctx.setStatus(`Battleship: fire on ${COLS[mv.c]}${mv.r + 1} · ${API.mult().toFixed(2)}×`);
+          await sleep(320);
+        }
+        if (API && API.inRound()) API.cashOut(); // bank the multiplier (agent doesn't buy extra shots)
+        ctx.setStatus($("#bsStatus") ? $("#bsStatus").textContent : "Done.");
+      },
+    },
+
+    moles: {
+      detect: () => !!window.MolesAPI && !!$("#molGrid"),
+      async play(ctx) {
+        const API = window.MolesAPI, bal = Casino.getBalance();
+        const dec = await decideOrDefault(
+          {
+            gameState: {}, legalMoves: ["start"], gameName: "Moles",
+            rules: "Whack holes to find hidden moles; each mole grows your multiplier, an empty hole busts you. Fewer moles = riskier, bigger payouts (3-4 is balanced). Choose a bet and mole count (1-8).",
+            extraArgs: { bet: { type: "integer", description: `wager 1..${bal}` }, moles: { type: "integer", description: "safe moles, 1-8" } }, extraRequired: ["bet"],
+          },
+          () => ({ action: "start", args: { bet: autoBetValue(settings.aggression), moles: Casino.randInt(2, 5) } })
+        );
+        applyBet(dec.args.bet);
+        const m = Math.max(1, Math.min(8, Number(dec.args.moles) || 3));
+        const sel = $("#molSelect"); if (sel) sel.value = String(m);
+        $("#molStart").click();
+        ctx.setStatus(`Moles: hunting (${m} mole${m > 1 ? "s" : ""})…`);
+        await sleep(300);
+        const target = Casino.randInt(1, Math.min(3, m));
+        let g = 0;
+        while (API.inRound() && API.found() < target && g++ < 8 && !ctx.shouldStop()) { API.whackRandom(); await sleep(420); }
+        if (API.inRound() && API.found() > 0) API.cashOut();
+        ctx.setStatus($("#molMsg") ? $("#molMsg").textContent : "Done.");
+      },
+    },
+
+    coinflip: {
+      detect: () => !!window.CoinflipAPI && !!$("#cfCoins"),
+      async play(ctx) {
+        const API = window.CoinflipAPI, bal = Casino.getBalance();
+        const dec = await decideOrDefault(
+          {
+            gameState: {}, legalMoves: ["heads", "tails"], gameName: "Coinflip",
+            rules: "Call heads or tails; correct compounds ~1.96×, wrong loses everything. You may flip 1-3 coins (all must match) for bigger jumps. Choose a bet, coins, and a side.",
+            extraArgs: { bet: { type: "integer", description: `wager 1..${bal}` }, coins: { type: "integer", description: "1-3" } }, extraRequired: ["bet"],
+          },
+          () => ({ action: Math.random() < 0.5 ? "heads" : "tails", args: { bet: autoBetValue(settings.aggression), coins: 1 } })
+        );
+        applyBet(dec.args.bet);
+        API.setCoins(Math.max(1, Math.min(3, Number(dec.args.coins) || 1)));
+        const side = dec.action === "tails" ? 0 : 1;
+        const target = Casino.randInt(1, 4);
+        API.call(side); await sleep(520);
+        let g = 0;
+        while (API.inRound() && API.streak() < target && g++ < 8 && !ctx.shouldStop()) { API.call(Math.random() < 0.5 ? 1 : 0); await sleep(520); }
+        if (API.inRound() && API.streak() > 0) API.cashOut();
+        ctx.setStatus($("#cfMsg") ? $("#cfMsg").textContent : "Done.");
+      },
+    },
+
+    rps: {
+      detect: () => !!window.RPSAPI && !!$("#rpsTrack"),
+      async play(ctx) {
+        const API = window.RPSAPI, bal = Casino.getBalance();
+        const dec = await decideOrDefault(
+          {
+            gameState: {}, legalMoves: ["rock", "paper", "scissors"], gameName: "Rock Paper Scissors",
+            rules: "Beat the house to compound ~1.96× per win; ties replay free, a loss ends the streak. The house throws at random so your move doesn't change the odds — it's a coin-flip-style streak. Pick a bet and a throw.",
+            extraArgs: { bet: { type: "integer", description: `wager 1..${bal}` } }, extraRequired: ["bet"],
+          },
+          () => ({ action: ["rock", "paper", "scissors"][Casino.randInt(0, 2)], args: { bet: autoBetValue(settings.aggression) } })
+        );
+        applyBet(dec.args.bet);
+        const moveMap = { rock: 0, paper: 1, scissors: 2 };
+        const target = Casino.randInt(1, 4);
+        API.throw(moveMap[dec.action] != null ? moveMap[dec.action] : Casino.randInt(0, 2)); await sleep(520);
+        let g = 0;
+        while (API.inRound() && API.streak() < target && g++ < 12 && !ctx.shouldStop()) { API.throw(Casino.randInt(0, 2)); await sleep(520); }
+        if (API.inRound() && API.streak() > 0) API.cashOut();
+        ctx.setStatus($("#rpsMsg") ? $("#rpsMsg").textContent : "Done.");
+      },
+    },
+
+    snakes: {
+      detect: () => !!window.SnakesAPI && !!$("#snBoard"),
+      async play(ctx) {
+        const API = window.SnakesAPI, bal = Casino.getBalance();
+        const dec = await decideOrDefault(
+          {
+            gameState: {}, legalMoves: ["roll"], gameName: "Snakes",
+            rules: "Roll 2d6 and move around a 12-tile loop; safe tiles compound your multiplier, snakes bust you. More snakes = higher risk/reward. Up to 5 rolls, cash out any time. Choose a bet and difficulty (1,3,5,7,9 snakes).",
+            extraArgs: { bet: { type: "integer", description: `wager 1..${bal}` }, snakes: { type: "integer", description: "1,3,5,7,9" } }, extraRequired: ["bet"],
+          },
+          () => ({ action: "roll", args: { bet: autoBetValue(settings.aggression), snakes: Casino.pick([1, 3, 3, 5, 7]) } })
+        );
+        applyBet(dec.args.bet);
+        const s = [1, 3, 5, 7, 9].includes(Number(dec.args.snakes)) ? Number(dec.args.snakes) : 3;
+        API.setDifficulty(s); API.setInstant(true);
+        const target = Casino.randInt(1, 4);
+        API.roll(); await waitFor(() => !API.busy(), 4000);
+        let g = 0;
+        while (API.inRound() && API.rolls() < target && g++ < 6 && !ctx.shouldStop()) { API.roll(); await waitFor(() => !API.busy(), 4000); }
+        if (API.inRound() && API.rolls() > 0) API.cashOut();
+        ctx.setStatus($("#snMsg") ? $("#snMsg").textContent : "Done.");
+      },
+    },
+
+    keno: {
+      detect: () => !!window.KenoAPI && !!$("#knBoard"),
+      async play(ctx) {
+        const API = window.KenoAPI, bal = Casino.getBalance();
+        const dec = await decideOrDefault(
+          {
+            gameState: {}, legalMoves: ["play"], gameName: "Keno",
+            rules: "Pick numbers on a 40-tile board, choose a risk level, and 10 tiles get drawn — match your picks to win (up to 10000×). Choose a bet and risk (low/classic/medium/high).",
+            extraArgs: { bet: { type: "integer", description: `wager 1..${bal}` }, risk: { type: "string", description: "low|classic|medium|high" } }, extraRequired: ["bet"],
+          },
+          () => ({ action: "play", args: { bet: autoBetValue(settings.aggression), risk: Casino.pick(["low", "classic", "classic", "medium", "high"]) } })
+        );
+        applyBet(dec.args.bet);
+        API.setRisk(["low", "classic", "medium", "high"].includes(dec.args.risk) ? dec.args.risk : "classic");
+        if (API.pickCount() === 0) API.quickPick();
+        ctx.setStatus("Keno: drawing…");
+        API.play();
+        await sleep(400);
+        ctx.setStatus($("#knMsg") ? $("#knMsg").textContent : "Done.");
+      },
+    },
+
     plinko: {
       detect: () => !!$("#dropBtn") && !!$("#plinkoStage"),
       async play(ctx) {
@@ -1524,6 +1883,7 @@ const RoyalAgent = (() => {
     },
     // Compute is locked while running — the change only takes effect on the next start.
     setCompute: (mode) => { if (running) return; settings.compute = mode === "cpu" ? "cpu" : "gpu"; applyCompute(); },
+    setEmotions: (on) => { settings.emotions = !!on; if (!on) tilt = 0; },
   };
 })();
 

@@ -100,6 +100,7 @@ const BlackjackGame = (() => {
       <div class="page-head">
         <h2 class="page-title">🃏 Blackjack</h2>
         <p class="page-sub">Beat the dealer without going over 21. Blackjack pays 3:2. Dealer stands on 17.</p>
+        ${Casino.helpBtnHTML("bjHelp")}
       </div>
       <div class="game-layout">
         <div class="panel">
@@ -143,6 +144,18 @@ const BlackjackGame = (() => {
     const hintEl = view.querySelector("#bjHint");
 
     Casino.wireBet(view);
+    view.querySelector("#bjHelp").addEventListener("click", () => Casino.openHowTo("How to play — Blackjack", `
+      <h4>Goal</h4>
+      <p>Get your hand closer to <b>21</b> than the dealer — without going over. Number cards are face value, face cards are 10, and an <b>Ace</b> is 1 or 11 (whichever helps). Going over 21 is a <b>bust</b> and an instant loss.</p>
+      <h4>Your options</h4>
+      <ul>
+        <li><b>Hit</b> — take another card.</li>
+        <li><b>Stand</b> — keep your total and pass to the dealer.</li>
+        <li><b>Double</b> — double your bet, take exactly one more card, then stand.</li>
+      </ul>
+      <h4>Payouts &amp; dealer rules</h4>
+      <p>A win pays <b>1:1</b>; a natural <b>Blackjack</b> (Ace + 10-value on the first two cards) pays <b>3:2</b>. The dealer must <b>hit until 17</b> and then stand. Tie = push (bet returned).</p>
+      <p>New to it? Flip on <b>🔰 Beginner mode</b> for a live basic-strategy hint each turn.</p>`));
 
     // Beginner mode preference persists.
     const BEG_KEY = "royal_casino_bj_beginner";

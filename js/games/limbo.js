@@ -24,6 +24,7 @@ const LimboGame = (() => {
       <div class="page-head">
         <h2 class="page-title">🛸 Limbo</h2>
         <p class="page-sub">Set a target multiplier and fire. If the random result lands at or above your target, you win. Higher targets pay more but hit less.</p>
+        ${Casino.helpBtnHTML("limboHelp")}
       </div>
       <div class="game-layout">
         <div class="panel">
@@ -67,6 +68,13 @@ const LimboGame = (() => {
     const limboBtn = view.querySelector("#limboBtn");
 
     Casino.wireBet(view, updateStats);
+    view.querySelector("#limboHelp").addEventListener("click", () => Casino.openHowTo("How to play — Limbo", `
+      <h4>Goal</h4>
+      <p>Every round generates a random <b>result multiplier</b>. Before firing, you pick a <b>target</b>. If the result lands <b>at or above</b> your target, you win that multiplier; if it falls short, you lose the bet.</p>
+      <h4>Risk vs. reward</h4>
+      <p>A low target (like 1.5×) hits often but pays little. A high target (like 100×) pays huge but rarely lands. The <b>Win chance</b> and <b>Payout</b> stats update live as you change the target, so you can see the trade-off before you commit.</p>
+      <h4>Fairness</h4>
+      <p>The result is drawn from a fair distribution with a small house edge baked into the payout, exactly like a provably-fair crash game.</p>`));
 
     view.querySelectorAll("[data-target]").forEach((b) => {
       b.addEventListener("click", () => {

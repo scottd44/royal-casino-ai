@@ -24,7 +24,18 @@ Everything is play credits stored in your browser's `localStorage`.
 | 🗼 **Tower** | Climb 8 rows picking a safe tile each; five difficulties. Cash out before a mine. |
 | 🎯 **Wheel** | Compounding risk wheel — each winning spin multiplies your multiplier; keep spinning or cash out. Low/Medium/High/Risky. |
 | 🐔 **Chicken Road** | Cross the road lane by lane; each lane grows your multiplier. Cash out before a car hits. Easy → Daredevil. |
+| 🃏 **Texas Hold'em** | No-limit Hold'em vs. three betting bots — blinds, all-ins, side pots, showdowns. Bots bet by Monte-Carlo win-odds. |
 | 🟡 **Plinko** | Drop a ball down a peg pyramid into a multiplier slot — Low/Med/High risk, 8/12/16 rows, up to 1000×. |
+| 🀄 **Baccarat** | Back Player, Banker (best bet, ~1% edge), or Tie (8:1). 8-deck shoe with the authentic third-card rules and bead-plate history. |
+| 🂡 **Three Card Poker** | Ante/Play vs. the dealer (Q-high to qualify) plus a Pair Plus side bet. Straight beats flush; ante bonus on straights and up. |
+| ⚔️ **Casino War** | Highest card wins 1:1 — on a tie, surrender or go to war for the pot. |
+| 🔴 **Red Dog** | Bet whether the third card falls between the first two; wider spread pays less (up to 5:1), pairs can hit 11:1. Raise or call. |
+| 🚢 **Battleship** | Your bet buys 5 shots at a hidden 5×5 fleet. Hit pieces (+0.045×), sink ships for bonuses, sink the fleet for 100×. Buy edge-priced extra shots; provably-fair seed commit. |
+| 🐹 **Moles** | Whack holes to find your chosen number of moles (safe) among traps — each mole compounds the multiplier, an empty hole busts. Fewer moles = bigger payouts (up to 122×). |
+| 🐍 **Snakes** | Roll 2d6 around a 12-tile loop. Safe tiles compound your multiplier; snakes bust. Difficulty = snake count (1–9). Push up to 5 rolls for as much as 1,720×. |
+| 🪙 **Coinflip** | Call heads/tails and compound 1.96× per correct flip — or flip 2–3 coins at once (3.92× / 7.84×). Cash out or push the streak. Provably-fair coins. |
+| ✊ **Rock Paper Scissors** | Beat the house to compound 1.96× per win; ties replay free, a loss ends the streak. Provably-fair house move. |
+| 🔢 **Keno** | Pick 1–10 numbers on a 40-tile board; 10 are drawn. Low/Classic/Medium/High risk toggle reshapes the paytable (all 97% RTP) with jackpots to 10,000×. |
 
 ## Features
 
@@ -85,22 +96,23 @@ royal-casino/
 ├── index.html          # Shell: top bar, wallet, nav, script includes
 ├── css/styles.css      # Full theme & component styles
 └── js/
-    ├── core.js         # Wallet, bets/payouts, toasts, helpers
-    ├── app.js          # Router + lobby
-    └── games/
-        ├── slots.js
-        ├── blackjack.js
-        ├── videopoker.js
-        ├── roulette.js
-        ├── dice.js
-        ├── mines.js
-        ├── crash.js
-        ├── limbo.js
-        ├── plinko.js
-        ├── hilo.js
-        ├── tower.js
-        └── wheel.js
+    ├── core.js         # Wallet, bets/payouts, toasts, sounds, rig, How-to-play modal
+    ├── app.js          # Router + lobby + game catalog/categories
+    ├── agent/          # Optional local-LLM "AI Lab" that plays every game
+    └── games/          # One self-contained module per game
+        ├── slots.js         gems.js          blackjack.js
+        ├── videopoker.js    roulette.js      dice.js
+        ├── mines.js         crash.js         limbo.js
+        ├── plinko.js        hilo.js          tower.js
+        ├── wheel.js         chicken.js       holdem.js
+        ├── baccarat.js      threecard.js     casinowar.js
+        ├── reddog.js        battleship.js    moles.js
+        ├── snakes.js        coinflip.js      rps.js
+        └── keno.js
 ```
+
+Every game exposes a **❔ How to play** button (rules window) and an **AI adapter** so the
+local-LLM agent in `js/agent/` can play it hands-free.
 
 ## Resetting
 

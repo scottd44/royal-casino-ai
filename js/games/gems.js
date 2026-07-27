@@ -38,6 +38,7 @@ const GemsGame = (() => {
       <div class="page-head">
         <h2 class="page-title">💎 Cosmic Gems</h2>
         <p class="page-sub">A 3×3 gem slot with 5 paylines — three rows and both diagonals. Match three gems on any line; several lines can hit at once.</p>
+        ${Casino.helpBtnHTML("gemsHelp")}
       </div>
       <div class="game-layout">
         <div class="panel">
@@ -77,6 +78,13 @@ const GemsGame = (() => {
     let bestWin = 0;
 
     Casino.wireBet(view);
+    view.querySelector("#gemsHelp").addEventListener("click", () => Casino.openHowTo("How to play — Cosmic Gems", `
+      <h4>Goal</h4>
+      <p>Spin a <b>3×3</b> grid of gems. There are <b>5 paylines</b>: the three horizontal rows plus both diagonals. Land <b>three matching gems</b> on any line to win that line.</p>
+      <h4>Multiple wins at once</h4>
+      <p>Because lines overlap, a single spin can hit <b>several paylines</b> together — the <b>Lines hit</b> stat shows how many landed. Your bet is split across all five lines, and every winning line pays per the table.</p>
+      <h4>Payouts</h4>
+      <p>Rarer gems pay more (three of the top gem is the jackpot). The full payout table is shown beside the grid.</p>`));
 
     // Build 9 cells.
     let cells = [];

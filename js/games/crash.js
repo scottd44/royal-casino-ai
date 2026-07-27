@@ -39,6 +39,7 @@ const CrashGame = (() => {
       <div class="page-head">
         <h2 class="page-title">🚀 Crash</h2>
         <p class="page-sub">The multiplier climbs from 1.00×. Cash out before it crashes — wait too long and you lose it all.</p>
+        ${Casino.helpBtnHTML("crashHelp")}
       </div>
       <div class="game-layout">
         <div class="panel">
@@ -90,6 +91,13 @@ const CrashGame = (() => {
     const potPay = view.querySelector("#potPay");
 
     Casino.wireBet(view);
+    view.querySelector("#crashHelp").addEventListener("click", () => Casino.openHowTo("How to play — Crash", `
+      <h4>Goal</h4>
+      <p>Place a bet, then watch the multiplier climb from <b>1.00×</b> upward. Hit <b>Cash Out</b> to collect your bet times the current multiplier — but if the rocket <b>crashes</b> before you cash out, you lose the whole bet.</p>
+      <h4>Auto cash-out</h4>
+      <p>Set an <b>auto cash-out</b> value and the game banks you automatically the instant the multiplier reaches it — handy for locking in a target without split-second timing. Set it to <b>0 / Off</b> to cash out manually.</p>
+      <h4>The catch</h4>
+      <p>The crash point is random every round: most rounds crash early, a few run very high. Bigger multipliers mean bigger wins but a much greater chance of busting first.</p>`));
     view.querySelectorAll("[data-auto]").forEach((b) => {
       b.addEventListener("click", () => { autoInput.value = b.dataset.auto; });
     });

@@ -14,6 +14,7 @@ const DiceGame = (() => {
       <div class="page-head">
         <h2 class="page-title">🎲 Dice</h2>
         <p class="page-sub">Pick a target and predict whether the roll lands under or over it. Higher risk, higher payout.</p>
+        ${Casino.helpBtnHTML("diceHelp")}
       </div>
       <div class="game-layout">
         <div class="panel">
@@ -63,6 +64,13 @@ const DiceGame = (() => {
     const overBtn = view.querySelector("#overBtn");
 
     Casino.wireBet(view, updateStats);
+    view.querySelector("#diceHelp").addEventListener("click", () => Casino.openHowTo("How to play — Dice", `
+      <h4>Goal</h4>
+      <p>A number from <b>0.00 to 100.00</b> is rolled at random. Drag the slider to set your <b>target</b>, then bet whether the roll comes in <b>under</b> or <b>over</b> it.</p>
+      <h4>Setting the odds</h4>
+      <p>The slider <i>is</i> your risk dial. Betting "under 90" wins ~90% of the time but pays barely over 1×; betting "under 5" almost never wins but pays around 20×. The <b>Win chance</b> and <b>Multiplier</b> stats move with the slider so you always see the deal.</p>
+      <h4>Fairness</h4>
+      <p>Every roll is uniform and independent, with the payouts set to the true odds minus a small house edge.</p>`));
 
     function winChance() {
       return mode === "under" ? target : 100 - target;

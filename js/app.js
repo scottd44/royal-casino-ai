@@ -19,11 +19,22 @@
     { id: "tower",     emoji: "🗼", name: "Tower",        desc: "Climb row by row, dodge the mines.",         tag: "Cash out anytime", accent: "#a3e635", render: (v) => TowerGame.render(v) },
     { id: "wheel",     emoji: "🎯", name: "Wheel",        desc: "Compound each spin or cash out — 4 risk levels.", tag: "Keep spinning", accent: "#a982ff", render: (v) => WheelGame.render(v) },
     { id: "chicken",   emoji: "🐔", name: "Chicken Road", desc: "Cross lane by lane; cash out before a car hits.", tag: "Cash out anytime", accent: "#facc15", render: (v) => ChickenGame.render(v) },
+    { id: "holdem",    emoji: "🃏", name: "Texas Hold'em", desc: "No-limit poker vs. betting bots. Blinds, all-ins, showdowns.", tag: "vs. bots", accent: "#34d399", render: (v) => HoldemGame.render(v) },
+    { id: "baccarat",  emoji: "🀄", name: "Baccarat",      desc: "Back Player, Banker or Tie — closest to 9 wins.", tag: "Banker ~99%", accent: "#e6c15a", render: (v) => BaccaratGame.render(v) },
+    { id: "threecard", emoji: "🂡", name: "Three Card Poker", desc: "Three cards vs. the dealer — play or fold.", tag: "Ante + bonus", accent: "#5eead4", render: (v) => ThreeCardGame.render(v) },
+    { id: "casinowar", emoji: "⚔️", name: "Casino War",    desc: "Highest card wins. Go to war on a tie.", tag: "1:1", accent: "#ef4d6a", render: (v) => CasinoWarGame.render(v) },
+    { id: "reddog",    emoji: "🔴", name: "Red Dog",       desc: "Will the third card land between? Bet the spread.", tag: "Up to 11:1", accent: "#fb7185", render: (v) => RedDogGame.render(v) },
+    { id: "battleship",emoji: "🚢", name: "Battleship",      desc: "Buy shots at a hidden fleet — hit pieces, sink ships for big multipliers.", tag: "Up to 100×", accent: "#4d8cff", render: (v) => BattleshipGame.render(v) },
+    { id: "moles",     emoji: "🐹", name: "Moles",           desc: "Whack holes to find the moles — each one grows your multiplier.", tag: "Up to 122×", accent: "#e6c15a", render: (v) => MolesGame.render(v) },
+    { id: "snakes",    emoji: "🐍", name: "Snakes",          desc: "Roll around a 12-tile loop; dodge snakes, compound safe tiles.", tag: "Up to 1720×", accent: "#3ecf8e", render: (v) => SnakesGame.render(v) },
+    { id: "coinflip",  emoji: "🪙", name: "Coinflip",        desc: "Call heads or tails and compound 1.96× per flip.", tag: "Streak", accent: "#4d8cff", render: (v) => CoinflipGame.render(v) },
+    { id: "rps",       emoji: "✊", name: "Rock Paper Scissors", desc: "Beat the house to build a 1.96×-per-win streak.", tag: "Streak", accent: "#9d6bff", render: (v) => RPSGame.render(v) },
+    { id: "keno",      emoji: "🔢", name: "Keno",            desc: "Pick numbers, draw 10 of 40, chase up to 10,000×.", tag: "Up to 10000×", accent: "#fb7185", render: (v) => KenoGame.render(v) },
   ];
 
   const CATEGORIES = [
-    { label: "🃏 Table Games", ids: ["blackjack", "videopoker", "hilo", "roulette"] },
-    { label: "⚡ Originals",   ids: ["dice", "mines", "crash", "limbo", "plinko", "tower", "wheel", "chicken"] },
+    { label: "🃏 Table Games", ids: ["blackjack", "holdem", "baccarat", "threecard", "casinowar", "reddog", "videopoker", "hilo", "roulette"] },
+    { label: "⚡ Originals",   ids: ["dice", "mines", "crash", "limbo", "plinko", "tower", "wheel", "chicken", "battleship", "moles", "snakes", "coinflip", "rps", "keno"] },
     { label: "🎰 Slots",       ids: ["slots", "gems"] },
   ];
 
@@ -127,6 +138,8 @@
             <tr><td>😤 <b>Tilted</b> (45–69)</td><td>pressing bets, itching to win it back</td></tr>
             <tr><td>🤬 <b>Full tilt</b> (70+)</td><td>betting angry, chasing everything</td></tr>
           </table>
+          <p>Flip <b>😤 Emotions</b> off in the Lab to disable tilt entirely — it plays <b>🧊 cold-blooded</b>,
+          steady bet-sizing with no chasing (but it still runs its mouth in the reasoning).</p>
         </div>
 
         <div class="panel guide-sec">
@@ -206,11 +219,13 @@
         <button class="btn btn-ghost btn-sm" id="infoClose">✕</button>
       </div>
       <div class="report-section">
-        <h4>The games</h4>
-        <div class="info-body">Thirteen games — Slots, Cosmic Gems, Blackjack, Video Poker, Roulette, Dice, Mines,
-        Crash, Limbo, Plinko, Hilo, Tower and Wheel — all played with simulated dollars stored in your browser.
-        Nothing here uses real money. Every game has sound (clicks, ticks, win/lose chimes); toggle it with
-        the <b>🔊</b> button in the top bar.</div>
+        <h4>The games (${GAMES.length})</h4>
+        <div class="info-body">Table games — Blackjack, <b>Texas Hold'em</b> (vs. betting bots), Video Poker,
+        Hilo and Roulette. Originals — Dice, Mines, Crash, Limbo, Plinko, Tower, Wheel and <b>Chicken Road</b>.
+        Slots — Lucky Sevens and <b>Cosmic Gems</b>. All play with simulated dollars stored in your browser;
+        nothing uses real money. Find them in the lobby, grouped by type, or via the <b>Games ▾</b> menu in the
+        top bar. Every game has sound (toggle with the <b>🔊</b> button); each has an ℹ️ or built-in explainer
+        of its odds.</div>
       </div>
       <div class="report-section">
         <h4>😈 Rigged odds</h4>
@@ -240,7 +255,8 @@
             <li><b>Agentic mode</b> — the AI free-roams between games, choosing where to play next.</li>
             <li><b>Aggression &amp; speed</b> sliders shape how it bets and how fast it moves.</li>
             <li><b>Brainpower</b> — pick how many tokens it may think with per decision (🦎 Instinct / 🃏 Sharp / 🧠 Deep).</li>
-            <li><b>Tilt meter</b> — losses build real tilt that bleeds into its bet sizing and reasoning; wins cool it off.</li>
+            <li><b>Tilt meter</b> — losses build real tilt that bleeds into its bet sizing and trash talk; wins cool it off. Toggle 😤 Emotions off for cold, steady play.</li>
+            <li><b>Poker</b> — it can sit at Texas Hold'em too; it's fed its live win-odds &amp; pot odds to bet, fold and bluff.</li>
             <li><b>Session timer</b> — auto-stops and reports after a set duration.</li>
             <li><b>Break scheduler</b> — pauses inference on a cycle so the machine isn't overworked.</li>
             <li><b>Multi-bet roulette</b> — spreads chips across the table in a single spin.</li>

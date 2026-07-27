@@ -101,6 +101,7 @@ const VideoPokerGame = (() => {
       <div class="page-head">
         <h2 class="page-title">🎴 Video Poker</h2>
         <p class="page-sub">Jacks or Better. Deal five, hold the ones you want, and draw. Pair of jacks or higher pays.</p>
+        ${Casino.helpBtnHTML("vpHelp")}
       </div>
       <div class="game-layout">
         <div class="panel">
@@ -148,6 +149,17 @@ const VideoPokerGame = (() => {
       localStorage.setItem(INSTANT_KEY, instantChk.checked ? "1" : "0"));
 
     Casino.wireBet(view);
+    view.querySelector("#vpHelp").addEventListener("click", () => Casino.openHowTo("How to play — Video Poker", `
+      <h4>Goal</h4>
+      <p>Make the best five-card poker hand you can. Press <b>Deal</b> for five cards, then click any cards you want to <b>Hold</b>, and press <b>Draw</b> to replace the rest. Your final hand is paid per the table.</p>
+      <h4>"Jacks or Better"</h4>
+      <p>The smallest paying hand is a <b>pair of Jacks</b> — a pair of tens or lower pays nothing. Bigger hands (two pair, flush, full house, and up to a royal flush) pay progressively more, shown live in the paytable.</p>
+      <h4>Strategy tips</h4>
+      <ul>
+        <li>Always keep a paying pair or better.</li>
+        <li>Hold four cards to a flush or open-ended straight over a low pair.</li>
+        <li>Never hold a lone low card just because it's high-ish — draw fresh.</li>
+      </ul>`));
 
     function highlightRow(key) {
       view.querySelectorAll("#vpPaytable tr").forEach((tr) =>

@@ -57,6 +57,12 @@
             <button type="button" data-compute="cpu">🧮 CPU</button>
           </div>
         </div>
+        <div class="lab-row">
+          <label class="lab-switch" style="margin:0;">
+            <input type="checkbox" id="emotions" checked><span>😤 Emotions (tilt)</span>
+            <button class="lab-info" type="button" data-tip="ON: losses build 'tilt' and wins cool it, and that emotion drives how hard it presses and chases — the full degenerate. OFF: cold-blooded, steady bet-sizing with no tilt swings. Either way it still talks plenty of trash in its reasoning.">ⓘ</button>
+          </label>
+        </div>
         <div class="lab-row-2">
           <div><label>Model
             <button class="lab-info" type="button" data-tip="The Ollama model that makes the decisions. This list is your locally-installed models (auto-detected). qwen2.5:7b is recommended — it's reliable at the structured tool-calls this app needs. Bigger models reason better but use more tokens and run slower; smaller ones are faster but rougher.">ⓘ</button>
@@ -192,6 +198,10 @@
   $("modelSelect").addEventListener("change", (e) => R.setModel(e.target.value || "qwen2.5:7b"));
   $("modelRefresh").addEventListener("click", refreshModels);
 
+  $("emotions").addEventListener("change", (e) => {
+    R.setEmotions(e.target.checked);
+    Casino.toast(e.target.checked ? "Emotions on — full tilt degenerate." : "Emotions off — cold-blooded mode (still profane).", "info");
+  });
   $("computeSeg").addEventListener("click", (e) => {
     const b = e.target.closest("[data-compute]");
     if (!b) return;

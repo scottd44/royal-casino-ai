@@ -103,6 +103,30 @@ const Casino = (() => {
     return node;
   }
 
+  /* ---------- Shared "How to play" modal ----------
+     Any game can call Casino.openHowTo(title, html) to pop a rules window,
+     or drop Casino.helpBtnHTML(id) in its markup and wire the click. */
+  let howToOverlay = null;
+  function openHowTo(title, html) {
+    if (!howToOverlay) {
+      howToOverlay = document.createElement("div");
+      howToOverlay.className = "report-overlay howto-overlay";
+      document.body.appendChild(howToOverlay);
+      howToOverlay.addEventListener("click", (e) => { if (e.target === howToOverlay) howToOverlay.classList.remove("show"); });
+    }
+    howToOverlay.innerHTML =
+      `<div class="report-card howto-card">
+        <div class="report-head"><h2 class="report-title">${title}</h2>
+          <button class="btn btn-ghost btn-sm" data-howto-close>✕</button></div>
+        <div class="howto-body">${html}</div>
+        <div class="report-actions"><button class="btn" data-howto-close>Got it</button></div>
+      </div>`;
+    howToOverlay.querySelectorAll("[data-howto-close]").forEach((b) => (b.onclick = () => howToOverlay.classList.remove("show")));
+    howToOverlay.classList.add("show");
+  }
+  /** Markup for a small "How to play" button; wire it to openHowTo(...). */
+  function helpBtnHTML(id) { return `<button class="btn btn-ghost btn-sm howto-btn" id="${id}">❔ How to play</button>`; }
+
   /* ---------- Shared bet control ----------
      One standardized bet field used by every game: $-prefixed input with
      attached ½ / 2× / Max segment buttons. Keeps #betInput and [data-bet]
@@ -242,7 +266,7 @@ const Casino = (() => {
   return {
     getBalance, bet, payout, setBalance, addFunds, reset,
     renderBalance, fmt, money, randInt, pick, el, toast, sound, cheat,
-    betFieldHTML, wireBet,
+    betFieldHTML, wireBet, openHowTo, helpBtnHTML,
     STARTING_BALANCE,
   };
 })();

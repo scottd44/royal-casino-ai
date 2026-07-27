@@ -64,6 +64,7 @@ const RouletteGame = (() => {
       <div class="page-head">
         <h2 class="page-title">🎡 European Roulette</h2>
         <p class="page-sub">Place as many chips as you like, then spin. Straight up pays 35:1.</p>
+        ${Casino.helpBtnHTML("rtHelp")}
       </div>
       <div class="game-layout">
         <div class="panel">
@@ -130,6 +131,17 @@ const RouletteGame = (() => {
     const ballArm = view.querySelector("#ballArm");
     const spinBtn = view.querySelector("#spinBtn");
     const totalEl = view.querySelector("#totalStaked");
+    view.querySelector("#rtHelp").addEventListener("click", () => Casino.openHowTo("How to play — European Roulette", `
+      <h4>Goal</h4>
+      <p>Predict where the ball lands on a wheel of <b>0–36</b>. Pick a <b>chip size</b>, then click the table to place chips on any numbers or groups. Place as many bets as you like, then <b>Spin</b>.</p>
+      <h4>Common bets &amp; payouts</h4>
+      <table>
+        <tr><td><b>Straight up</b> (one number)</td><td>35:1</td></tr>
+        <tr><td><b>Column / Dozen</b> (12 numbers)</td><td>2:1</td></tr>
+        <tr><td><b>Red / Black, Odd / Even, 1–18 / 19–36</b></td><td>1:1</td></tr>
+      </table>
+      <h4>The zero</h4>
+      <p>This is <b>single-zero</b> European roulette — one green <b>0</b> that loses the even-money bets, giving a low ~2.7% house edge. Undo, clear, or re-bet your last spread with the buttons below the table.</p>`));
 
     // paint wheel pockets
     wheel.style.background = `conic-gradient(${ORDER.map((n, i) => {

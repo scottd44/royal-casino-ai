@@ -52,6 +52,7 @@ const PlinkoGame = (() => {
         <h2 class="page-title">🟡 Plinko</h2>
         <p class="page-sub">Drop the ball and let it bounce down the pegs. Edge slots pay huge but are rare;
           the middle pays under 1×. Pick your risk and rows, then drop as many as you like.</p>
+        ${Casino.helpBtnHTML("plinkoHelp")}
       </div>
       <div class="game-layout">
         <div class="panel">
@@ -416,6 +417,13 @@ const PlinkoGame = (() => {
     }
 
     Casino.wireBet(view, updateInfo);
+    view.querySelector("#plinkoHelp").addEventListener("click", () => Casino.openHowTo("How to play — Plinko", `
+      <h4>Goal</h4>
+      <p>Drop a ball from the top and watch it bounce off the pegs, landing in one of the slots along the bottom. Whatever <b>multiplier</b> that slot shows is applied to your bet.</p>
+      <h4>Where the payouts live</h4>
+      <p>The <b>outer</b> slots carry the big multipliers but are rare to reach; the <b>middle</b> slots are the most likely and often pay <b>under 1×</b> (a partial loss). It balances out to a small house edge over many drops.</p>
+      <h4>Risk &amp; rows</h4>
+      <p><b>Risk</b> (low / medium / high) reshapes the payouts — high risk makes the edges pay more and the middle pay less. More <b>rows</b> means more pegs, more slots, and higher top multipliers. Drop as many balls as you like.</p>`));
     betInput.addEventListener("input", updateInfo);
     riskRow.querySelectorAll("[data-risk]").forEach((b) => b.addEventListener("click", () => setRisk(b.dataset.risk)));
     rowsRow.querySelectorAll("[data-rows]").forEach((b) => b.addEventListener("click", () => setRows(Number(b.dataset.rows))));
