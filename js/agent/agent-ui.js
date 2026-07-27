@@ -963,6 +963,65 @@ const RoyalAgent = (() => {
       },
     },
 
+    chicken: {
+      detect: () => !!$("#chkCross") && !!$("#chkRoad"),
+      async play(ctx) {
+        const CSURV = { easy: 0.91, medium: 0.83, hard: 0.72, daredevil: 0.55 };
+        const DIFFS = Object.keys(CSURV);
+        const setup = await decideOrDefault(
+          {
+            gameState: { phase: "betting — choose difficulty and stake" },
+            legalMoves: ["start"], gameName: "Chicken Road (setup)",
+            rules:
+              "You MUST choose a 'difficulty' (easy=91% safe/lane, small payouts … daredevil=55% safe, huge " +
+              "payouts) AND a 'bet' — pick a difficulty matching your risk_appetite, don't just use easy.",
+            extraArgs: {
+              difficulty: { type: "string", description: "one of: easy, medium, hard, daredevil — you choose it" },
+              bet: { type: "integer", description: `dollars to wager, 1..${Casino.getBalance()}` },
+            },
+            extraRequired: ["difficulty", "bet"],
+          },
+          () => ({ action: "start", args: { difficulty: Casino.pick(DIFFS), bet: autoBetValue(settings.aggression) } })
+        );
+        const diff = DIFFS.includes(setup.args.difficulty) ? setup.args.difficulty : "easy";
+        $("#chkDiff").value = diff;
+        applyBet(setup.args.bet);
+        $("#chkStart").click();
+        await sleep(250);
+
+        const safePct = Math.round(CSURV[diff] * 100) + "%";
+        let guard = 0;
+        while ($("#chkStart").disabled && !ctx.shouldStop() && guard++ < 20) {
+          const lane = parseInt($("#laneNum").textContent, 10) || 0;
+          const legal = lane > 0 ? ["cross", "cashout"] : ["cross"];
+          const dec = await decideOrDefault(
+            {
+              gameState: {
+                difficulty: diff,
+                lanes_crossed: lane,
+                current_multiplier: $("#curMult").textContent,
+                next_lane_multiplier: $("#nextMult").textContent,
+                safe_chance_per_lane: safePct,
+              },
+              legalMoves: legal, gameName: "Chicken Road",
+              rules:
+                "Each 'cross' advances one lane and multiplies your payout, but has a crash chance (a car " +
+                "hits you and you lose everything). 'cashout' banks current_multiplier × your bet. Push your " +
+                "luck while it feels worth it; bank before greed gets you.",
+            },
+            () => (lane >= 3 ? { action: "cashout", args: {} } : { action: "cross", args: {} })
+          );
+          if (dec.action === "cashout" && lane > 0) { ctx.setStatus("Cashing out…"); $("#chkCash").click(); break; }
+          ctx.setStatus(`Crossing lane ${lane + 1}…`);
+          $("#chkCross").click();
+          // Wait for the hop to resolve (safe → Cross re-enables; crash/win → Start re-enables).
+          await waitFor(() => !$("#chkCross").disabled || !$("#chkStart").disabled, 3000);
+          await sleep(120);
+        }
+        ctx.setStatus($("#chkMsg").textContent || "Round complete.");
+      },
+    },
+
     plinko: {
       detect: () => !!$("#dropBtn") && !!$("#plinkoStage"),
       async play(ctx) {

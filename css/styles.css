@@ -541,6 +541,83 @@ input:focus-visible, select:focus-visible { box-shadow: none; }
   pointer-events: none;
 }
 
+/* ---------- Chicken Road ---------- */
+.chk-road {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  height: 300px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #0e1119, #090c12);
+  border: 1px solid var(--line);
+  box-shadow: inset 0 0 40px rgba(0,0,0,0.55);
+  scrollbar-width: thin;
+}
+.chk-curb {
+  flex: 0 0 66px;
+  display: flex; align-items: center; justify-content: center;
+  background: repeating-linear-gradient(45deg, #1b3a24, #1b3a24 11px, #214a2c 11px, #214a2c 22px);
+}
+.chk-start { border-right: 4px dashed rgba(255,255,255,0.45); }
+.chk-finish { border-left: 4px dashed rgba(255,255,255,0.45); }
+.chk-home { font-size: 30px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+.chk-lane {
+  flex: 0 0 66px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #232830, #191d25);
+  border-right: 2px dashed rgba(246,217,122,0.22);
+  transition: background 0.25s, box-shadow 0.25s, opacity 0.25s;
+}
+.chk-mult {
+  position: absolute; top: 7px; left: 0; right: 0;
+  text-align: center; font-size: 11px; font-weight: 800;
+  color: var(--gold-2); font-variant-numeric: tabular-nums; z-index: 3;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+.chk-car {
+  position: absolute; left: 50%; top: 0;
+  font-size: 27px;
+  animation: chkDrive linear infinite;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
+}
+@keyframes chkDrive {
+  from { transform: translate(-50%, -160%); }
+  to   { transform: translate(-50%, 360%); }
+}
+.chk-lane.chk-next { background: linear-gradient(180deg, rgba(246,217,122,0.16), #191d25); box-shadow: inset 0 0 0 2px rgba(246,217,122,0.55); cursor: pointer; }
+.chk-lane.cleared { background: linear-gradient(180deg, rgba(62,207,142,0.14), #191d25); }
+.chk-lane.cleared .chk-car { animation: none; opacity: 0.12; }
+.chk-lane.crash { background: linear-gradient(180deg, rgba(239,77,106,0.4), #191d25); }
+.chk-lane.crash .chk-car { animation-duration: 0.35s !important; }
+.chk-lane.dim { opacity: 0.4; }
+.chk-chicken {
+  position: absolute; bottom: 26px; left: 0;
+  font-size: 34px; z-index: 6;
+  transition: left 0.36s cubic-bezier(0.34, 1.4, 0.5, 1);
+  will-change: left, transform;
+  filter: drop-shadow(0 3px 5px rgba(0,0,0,0.6));
+}
+.chk-chicken.hop { animation: chkHop 0.36s ease; }
+@keyframes chkHop {
+  0% { transform: translateY(0) scale(1); }
+  45% { transform: translateY(-52px) scale(1.1); }
+  100% { transform: translateY(0) scale(1); }
+}
+.chk-chicken.splat { animation: chkSplat 0.45s forwards; }
+@keyframes chkSplat {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.6); }
+  100% { transform: scale(1.35); }
+}
+.chk-chicken.cheer { animation: chkCheer 0.55s ease infinite; }
+@keyframes chkCheer {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-16px) rotate(-8deg); }
+}
+
 /* ---------- Cosmic Gems ---------- */
 .gem-machine { display: flex; flex-direction: column; align-items: center; gap: 18px; }
 .gem-grid {

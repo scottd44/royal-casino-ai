@@ -18,11 +18,12 @@
     { id: "hilo",      emoji: "🔼", name: "Hilo",         desc: "Call higher or lower, chain the streak.",    tag: "Cash out anytime", accent: "#5eead4", render: (v) => HiloGame.render(v) },
     { id: "tower",     emoji: "🗼", name: "Tower",        desc: "Climb row by row, dodge the mines.",         tag: "Cash out anytime", accent: "#a3e635", render: (v) => TowerGame.render(v) },
     { id: "wheel",     emoji: "🎯", name: "Wheel",        desc: "Compound each spin or cash out — 4 risk levels.", tag: "Keep spinning", accent: "#a982ff", render: (v) => WheelGame.render(v) },
+    { id: "chicken",   emoji: "🐔", name: "Chicken Road", desc: "Cross lane by lane; cash out before a car hits.", tag: "Cash out anytime", accent: "#facc15", render: (v) => ChickenGame.render(v) },
   ];
 
   const CATEGORIES = [
     { label: "🃏 Table Games", ids: ["blackjack", "videopoker", "hilo", "roulette"] },
-    { label: "⚡ Originals",   ids: ["dice", "mines", "crash", "limbo", "plinko", "tower", "wheel"] },
+    { label: "⚡ Originals",   ids: ["dice", "mines", "crash", "limbo", "plinko", "tower", "wheel", "chicken"] },
     { label: "🎰 Slots",       ids: ["slots", "gems"] },
   ];
 

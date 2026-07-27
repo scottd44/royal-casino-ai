@@ -23,6 +23,7 @@ Everything is play credits stored in your browser's `localStorage`.
 | 🔼 **Hilo** | Call the next card higher or lower (Ace low, ties win); chain correct calls for a compounding multiplier. |
 | 🗼 **Tower** | Climb 8 rows picking a safe tile each; five difficulties. Cash out before a mine. |
 | 🎯 **Wheel** | Compounding risk wheel — each winning spin multiplies your multiplier; keep spinning or cash out. Low/Medium/High/Risky. |
+| 🐔 **Chicken Road** | Cross the road lane by lane; each lane grows your multiplier. Cash out before a car hits. Easy → Daredevil. |
 | 🟡 **Plinko** | Drop a ball down a peg pyramid into a multiplier slot — Low/Med/High risk, 8/12/16 rows, up to 1000×. |
 
 ## Features
