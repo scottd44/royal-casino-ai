@@ -541,6 +541,30 @@ input:focus-visible, select:focus-visible { box-shadow: none; }
   pointer-events: none;
 }
 
+/* ---------- Blackjack beginner mode ---------- */
+.bj-beginner {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 12px; font-size: 13px; color: var(--text);
+  cursor: pointer; user-select: none;
+}
+.bj-beginner input { width: 15px; height: 15px; accent-color: var(--gold); cursor: pointer; }
+.bj-hint {
+  margin-bottom: 12px; padding: 10px 12px;
+  border-radius: 10px; font-size: 14px; text-align: center;
+  background: rgba(230,193,90,0.10);
+  border: 1px solid rgba(230,193,90,0.3);
+  color: var(--text);
+}
+.bj-hint b { color: var(--gold-2); letter-spacing: 0.5px; }
+.btn.bj-suggest {
+  box-shadow: 0 0 0 2px var(--gold), 0 0 16px rgba(230,193,90,0.5);
+  animation: bjSuggest 1.1s ease-in-out infinite;
+}
+@keyframes bjSuggest {
+  0%, 100% { box-shadow: 0 0 0 2px var(--gold), 0 0 10px rgba(230,193,90,0.35); }
+  50% { box-shadow: 0 0 0 2px var(--gold), 0 0 20px rgba(230,193,90,0.7); }
+}
+
 /* ---------- Chicken Road ---------- */
 .chk-road {
   position: relative;

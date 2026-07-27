@@ -44,6 +44,45 @@ const BlackjackGame = (() => {
 
   function isBlackjack(hand) { return hand.length === 2 && handValue(hand) === 21; }
 
+  function cardVal(c) { return c.rank === "A" ? 11 : ["K", "Q", "J", "10"].includes(c.rank) ? 10 : Number(c.rank); }
+
+  // Total + whether an ace is still counted as 11 (soft hand).
+  function handInfo(hand) {
+    let total = 0, aces = 0;
+    hand.forEach((c) => {
+      if (c.rank === "A") { total += 11; aces++; }
+      else total += cardVal(c);
+    });
+    while (total > 21 && aces > 0) { total -= 10; aces--; }
+    return { total, soft: aces > 0 };
+  }
+
+  /* Basic strategy (dealer stands on 17, blackjack pays 3:2, no split here).
+     Returns "hit" | "stand" | "double". `canDouble` false → doubles fall back. */
+  function basicStrategy(playerHand, dealerUpcard, canDouble) {
+    const { total, soft } = handInfo(playerHand);
+    const d = cardVal(dealerUpcard); // 2..11 (A = 11)
+    let rec;
+    if (soft) {
+      if (total >= 19) rec = "stand";
+      else if (total === 18) rec = (d >= 3 && d <= 6) ? "double" : (d === 2 || d === 7 || d === 8) ? "stand" : "hit";
+      else if (total === 17) rec = (d >= 3 && d <= 6) ? "double" : "hit";
+      else if (total >= 15) rec = (d >= 4 && d <= 6) ? "double" : "hit"; // A4, A5
+      else if (total >= 13) rec = (d >= 5 && d <= 6) ? "double" : "hit"; // A2, A3
+      else rec = "hit";
+    } else {
+      if (total >= 17) rec = "stand";
+      else if (total >= 13) rec = (d >= 2 && d <= 6) ? "stand" : "hit"; // 13-16
+      else if (total === 12) rec = (d >= 4 && d <= 6) ? "stand" : "hit";
+      else if (total === 11) rec = (d <= 10) ? "double" : "hit";
+      else if (total === 10) rec = (d <= 9) ? "double" : "hit";
+      else if (total === 9) rec = (d >= 3 && d <= 6) ? "double" : "hit";
+      else rec = "hit"; // 5-8
+    }
+    if (rec === "double" && !canDouble) rec = (soft && total >= 18) ? "stand" : "hit";
+    return rec;
+  }
+
   function cardHTML(card, faceDown) {
     if (faceDown) {
       return `<div class="card back"><div class="suit-mid">♠</div></div>`;
@@ -80,7 +119,9 @@ const BlackjackGame = (() => {
         <div class="panel">
           ${Casino.betFieldHTML(25)}
           <button class="btn btn-block btn-green" id="dealBtn" style="font-size:16px;padding:14px;">Deal</button>
+          <label class="bj-beginner"><input type="checkbox" id="bjBeginner"> 🔰 Beginner mode — show the strategy hint</label>
           <div class="divider"></div>
+          <div class="bj-hint" id="bjHint" style="display:none"></div>
           <div class="bj-actions">
             <button class="btn btn-blue" id="hitBtn" disabled>Hit</button>
             <button class="btn" id="standBtn" disabled>Stand</button>
@@ -98,8 +139,34 @@ const BlackjackGame = (() => {
     const standBtn = view.querySelector("#standBtn");
     const doubleBtn = view.querySelector("#doubleBtn");
     const resultEl = view.querySelector("#bjResult");
+    const beginnerChk = view.querySelector("#bjBeginner");
+    const hintEl = view.querySelector("#bjHint");
 
     Casino.wireBet(view);
+
+    // Beginner mode preference persists.
+    const BEG_KEY = "royal_casino_bj_beginner";
+    beginnerChk.checked = localStorage.getItem(BEG_KEY) === "1";
+    beginnerChk.addEventListener("change", () => {
+      localStorage.setItem(BEG_KEY, beginnerChk.checked ? "1" : "0");
+      updateHint();
+    });
+
+    const ACTION_LABEL = { hit: "HIT", stand: "STAND", double: "DOUBLE" };
+    function clearHintHighlight() {
+      [hitBtn, standBtn, doubleBtn].forEach((b) => b.classList.remove("bj-suggest"));
+    }
+    function updateHint() {
+      clearHintHighlight();
+      const canAct = inRound && !hitBtn.disabled;
+      if (!beginnerChk.checked || !canAct) { hintEl.style.display = "none"; return; }
+      const canDouble = player.length === 2 && Casino.getBalance() >= bet;
+      const rec = basicStrategy(player, dealer[0], canDouble);
+      hintEl.style.display = "";
+      hintEl.innerHTML = `🔰 Basic strategy says <b>${ACTION_LABEL[rec]}</b>`;
+      const btn = { hit: hitBtn, stand: standBtn, double: doubleBtn }[rec];
+      if (btn && !btn.disabled) btn.classList.add("bj-suggest");
+    }
 
     function drawHands(hideHole) {
       const pv = handValue(player);
@@ -133,6 +200,8 @@ const BlackjackGame = (() => {
       setActionButtons(false);
       dealBtn.disabled = false;
       drawHands(false);
+      hintEl.style.display = "none";
+      clearHintHighlight();
       resultEl.textContent = message;
       resultEl.style.color =
         type === "win" ? "var(--green)" : type === "lose" ? "var(--red)" : "var(--gold-2)";
@@ -153,6 +222,7 @@ const BlackjackGame = (() => {
       dealer = [draw(), draw()];
       drawHands(true);
       setActionButtons(true);
+      updateHint();
 
       // Immediate blackjack resolution
       const pBJ = isBlackjack(player);
@@ -187,6 +257,7 @@ const BlackjackGame = (() => {
       doubleBtn.disabled = true;
       if (handValue(player) > 21) playerBust();
       else if (handValue(player) === 21) dealerPlayAndSettle();
+      else updateHint();
     });
 
     standBtn.addEventListener("click", () => {
