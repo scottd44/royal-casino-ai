@@ -140,6 +140,7 @@ input:focus-visible, select:focus-visible { box-shadow: none; }
   padding: 0 14px 0 18px;
   border-bottom: 1px solid var(--line-soft);
   flex: 0 0 auto;
+  transition: padding 0.26s var(--ease);
 }
 .brand {
   display: flex;
@@ -150,6 +151,7 @@ input:focus-visible, select:focus-visible { box-shadow: none; }
   flex: 1;
   min-width: 0;
   overflow: hidden;
+  transition: gap 0.26s var(--ease);
 }
 .brand-mark {
   font-size: 23px;
@@ -158,12 +160,17 @@ input:focus-visible, select:focus-visible { box-shadow: none; }
   filter: drop-shadow(0 0 12px var(--glow-gold));
 }
 .brand-name {
+  display: inline-block;
   font-family: "Cinzel", serif;
   font-weight: 900;
   letter-spacing: 1.4px;
   font-size: 17px;
   white-space: nowrap;
-  transition: opacity 0.18s ease;
+  overflow: hidden;
+  /* Generous cap for "ROYAL CASINO" at this weight/size — must exceed its
+     natural width so it never clips before the collapse transition starts. */
+  max-width: 200px;
+  transition: opacity 0.16s ease, max-width 0.26s var(--ease);
 }
 .brand-accent { color: var(--gold); margin-left: 3px; }
 
@@ -258,16 +265,24 @@ input:focus-visible, select:focus-visible { box-shadow: none; }
 .sb-item.sb-primary { font-size: 14px; padding: 11px 12px; }
 .sb-sep { height: 1px; background: var(--line-soft); margin: 10px 12px; }
 
-/* Collapsed state — icons only, labels fade out but stay in the DOM. */
+/* Collapsed state — icons only, labels fade out but stay in the DOM.
+   .brand-name collapses its own max-width (not just opacity) so .brand
+   actually shrinks to the icon's footprint instead of leaving an invisible
+   block of text width behind. Without that, .sb-head's content never
+   narrows with the rail and the collapse button gets shoved out past the
+   74px collapsed width, floating over the top bar. .brand keeps flex:1 in
+   both states — with the label gone it just pins the icon to the left edge
+   and pushes the button to the right edge, mirroring the topbar's own
+   corner-anchored layout. */
 body.sb-collapsed .sb-txt,
 body.sb-collapsed .sb-tag,
-body.sb-collapsed .brand-name,
 body.sb-collapsed .sb-label { opacity: 0; pointer-events: none; }
+body.sb-collapsed .brand-name { max-width: 0; opacity: 0; pointer-events: none; }
+body.sb-collapsed .brand { gap: 0; }
 body.sb-collapsed .sb-label { height: 12px; padding: 8px 0 2px; overflow: hidden; }
 body.sb-collapsed .sb-item { justify-content: center; padding: 10px 0; gap: 0; }
-body.sb-collapsed .sb-head { padding: 0 10px; justify-content: center; }
+body.sb-collapsed .sb-head { padding: 0 10px; }
 body.sb-collapsed .sb-collapse { transform: rotate(180deg); }
-body.sb-collapsed .brand { flex: 0 0 auto; }
 
 .sb-scrim {
   position: fixed; inset: 0; z-index: 55;
@@ -289,9 +304,14 @@ body.sb-collapsed .brand { flex: 0 0 auto; }
   }
   body.sb-open .sidebar { transform: none; }
   body.sb-open .sb-scrim { opacity: 1; visibility: visible; }
+  /* Below the breakpoint the sidebar is always a full-width drawer — the
+     desktop-only "collapsed" (icon rail) state never applies here, so every
+     collapsed override above (including brand-name's max-width) is undone. */
   body.sb-collapsed { --sbw: 262px; }
   body.sb-collapsed .sb-txt, body.sb-collapsed .sb-tag,
-  body.sb-collapsed .brand-name, body.sb-collapsed .sb-label { opacity: 1; pointer-events: auto; }
+  body.sb-collapsed .sb-label { opacity: 1; pointer-events: auto; }
+  body.sb-collapsed .brand-name { max-width: 200px; opacity: 1; pointer-events: auto; }
+  body.sb-collapsed .brand { gap: 10px; }
   body.sb-collapsed .sb-item { justify-content: flex-start; padding: 9px 12px; gap: 11px; }
   .sb-toggle { display: inline-flex; }
   .sb-collapse { display: none; }

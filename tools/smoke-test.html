@@ -106,7 +106,11 @@ async function run() {
       await sleep(50);
     }
     d.querySelector('[data-nav="originals"]').click();
-    await sleep(1600);
+    // 14 cards at stagger 0.05 + delay 0.05 + duration 0.42 -> naturally settles
+    // ~1.2s; the watchdog's own worst case is ~1.42s. 2200ms leaves real
+    // headroom instead of racing it under CPU contention (a backgrounded tab
+    // hits the exact same throttling in production).
+    await sleep(2200);
     const cards = Array.from(d.querySelectorAll(".game-card"));
     ok("visible after rapid navigation",
        opacityOf(viewEl) > 0.99 && cards.length > 0 && cards.every((c) => opacityOf(c) > 0.9),
