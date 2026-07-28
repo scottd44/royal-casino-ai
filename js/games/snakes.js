@@ -151,7 +151,7 @@ const SnakesGame = (() => {
         pos = land; rolls++;
         const t = tile(land);
         if (board[land]) { // snake → bust
-          t.classList.add("snake", "revealed"); t.querySelector(".sn-tile-face").textContent = "🐍";
+          t.classList.add("snake", "revealed"); t.querySelector(".sn-tile-face").innerHTML = `<span class="sn-snake"></span>`;
           setToken(land);
           revealAll();
           phase = "over";
@@ -195,7 +195,7 @@ const SnakesGame = (() => {
     function revealAll() {
       for (let i = 0; i < TILES; i++) {
         const t = tile(i); if (t.classList.contains("revealed")) continue;
-        if (board[i]) { t.classList.add("snake", "faint"); t.querySelector(".sn-tile-face").textContent = "🐍"; }
+        if (board[i]) { t.classList.add("snake", "faint"); t.querySelector(".sn-tile-face").innerHTML = `<span class="sn-snake"></span>`; }
       }
     }
 

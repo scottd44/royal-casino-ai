@@ -10,7 +10,14 @@ const RPSGame = (() => {
   const EDGE = 0.02; // per decisive round → RTP 0.98
   const WIN = 2 * (1 - EDGE); // 1.96×
   const MOVES = ["Rock", "Paper", "Scissors"];
-  const ICON = ["🪨", "📄", "✂️"];
+  /* Minimalist outlined marks — inline SVG so they inherit currentColor and
+     scale with the layout, unlike the emoji they replace. */
+  const SVG = {
+    0: `<svg class="rps-svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M13 21c0-5 4-9 9-9h5c6 0 11 5 11 11s-5 11-11 11h-6c-4.5 0-8-3.5-8-8z"/><path d="M13 24H9a3 3 0 0 1 0-6h4"/></svg>`,
+    1: `<svg class="rps-svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M13 9h15l8 8v22H13z"/><path d="M28 9v8h8"/><path d="M19 24h11M19 30h11"/></svg>`,
+    2: `<svg class="rps-svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="34" r="5"/><circle cx="33" cy="34" r="5"/><path d="M18.5 30.5 34 10M29.5 30.5 14 10"/></svg>`,
+  };
+  const NAME_OF = ["Rock", "Paper", "Scissors"];
 
   function xmur3(str) { let h = 1779033703 ^ str.length; for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); } return () => { h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16; return h >>> 0; }; }
   const seedHash = (s) => xmur3(s)().toString(16).padStart(8, "0");
@@ -69,9 +76,9 @@ const RPSGame = (() => {
           <div class="field" style="margin-top:14px;">
             <label>Throw</label>
             <div class="rps-btns">
-              <button class="btn btn-blue rps-move" data-move="0" style="padding:16px;font-size:22px;">🪨</button>
-              <button class="btn btn-blue rps-move" data-move="1" style="padding:16px;font-size:22px;">📄</button>
-              <button class="btn btn-blue rps-move" data-move="2" style="padding:16px;font-size:22px;">✂️</button>
+              <button class="btn btn-blue rps-move" data-move="0" style="padding:14px;flex-direction:column;gap:6px;">${SVG[0]}<span class="rps-btn-label">Rock</span></button>
+              <button class="btn btn-blue rps-move" data-move="1" style="padding:14px;flex-direction:column;gap:6px;">${SVG[1]}<span class="rps-btn-label">Paper</span></button>
+              <button class="btn btn-blue rps-move" data-move="2" style="padding:14px;flex-direction:column;gap:6px;">${SVG[2]}<span class="rps-btn-label">Scissors</span></button>
             </div>
           </div>
           <button class="btn btn-block btn-green" id="rpsCash" style="margin-top:12px;font-size:16px;padding:14px;display:none;">Cash Out</button>
@@ -97,7 +104,7 @@ const RPSGame = (() => {
       const el = view.querySelector("#rpsTrack");
       const d = document.createElement("div");
       d.className = "rps-track-item " + (res > 0 ? "win" : res < 0 ? "lose" : "tie");
-      d.textContent = ICON[p] + (res > 0 ? "▸" : res < 0 ? "✕" : "=") + ICON[h];
+      d.innerHTML = `<span class="rps-mini">${SVG[p]}</span><span class="rps-vs-mini">${res > 0 ? "&rsaquo;" : res < 0 ? "&lsaquo;" : "="}</span><span class="rps-mini">${SVG[h]}</span>`;
       el.prepend(d); while (el.children.length > 12) el.removeChild(el.lastChild);
     }
     function refresh() {
@@ -117,13 +124,27 @@ const RPSGame = (() => {
       return true;
     }
 
+    /* Both plates flip on Y like turning cards, house trailing slightly so the
+       result reads as a reveal rather than a simultaneous swap. */
+    function revealThrows(youEl, houseEl) {
+      const g = window.gsap;
+      if (!g || (Casino.fx && Casino.fx.reduced())) return;
+      [youEl, houseEl].forEach((el, i) => {
+        g.fromTo(el,
+          { rotationY: -180, scale: 0.8, opacity: 0 },
+          { rotationY: 0, scale: 1, opacity: 1, duration: 0.52, delay: i * 0.12,
+            ease: "back.out(1.7)", force3D: true, clearProps: "transform,opacity" });
+      });
+    }
+
     function throwMove(p) { // also starts a fresh round after one ends
       if (!ensureStarted()) return;
       let h = houseMove(server, client, nonce);
       // 😈 rig: house throws the move your pick beats
       if (Casino.cheat.win()) h = (p + 2) % 3;
-      view.querySelector("#rpsYou").textContent = ICON[p];
-      view.querySelector("#rpsHouse").textContent = ICON[h];
+      const youEl = view.querySelector("#rpsYou"), houseEl = view.querySelector("#rpsHouse");
+      youEl.innerHTML = SVG[p]; houseEl.innerHTML = SVG[h];
+      revealThrows(youEl, houseEl);
       const res = outcome(p, h);
       pushTrack(res, p, h);
       if (res === 0) { // tie → neutral replay
@@ -132,10 +153,10 @@ const RPSGame = (() => {
         Casino.sound.play("tick"); renderFair();
       } else if (res > 0) {
         streak++; mult *= WIN; nonce++;
-        msg.textContent = `You win! ${ICON[p]} beats ${ICON[h]} · streak ${streak} · ${mult.toFixed(2)}×.`; msg.style.color = "var(--green)";
+        msg.textContent = `You win! ${NAME_OF[p]} beats ${NAME_OF[h]} · streak ${streak} · ${mult.toFixed(2)}×.`; msg.style.color = "var(--green)";
         Casino.sound.play(mult >= 8 ? "bigwin" : "win"); refresh();
       } else {
-        msg.textContent = `House wins with ${ICON[h]}. Streak over — lost ${Casino.money(bet)}. Throw again to play.`; msg.style.color = "var(--red)";
+        msg.textContent = `House wins with ${NAME_OF[h]}. Streak over — lost ${Casino.money(bet)}. Throw again to play.`; msg.style.color = "var(--red)";
         Casino.sound.play("lose"); endRound();
       }
     }

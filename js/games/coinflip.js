@@ -92,10 +92,33 @@ const CoinflipGame = (() => {
       view.querySelectorAll("#cfCoinSel .btn").forEach((x) => x.classList.toggle("sel", x === b));
     }));
 
-    const faceIcon = (f) => (f ? "🙂" : "👑");
-    function renderCoins(faces) {
-      view.querySelector("#cfCoins").innerHTML = (faces || Array(coins).fill(null))
-        .map((f) => `<div class="cf-coin ${f == null ? "" : f ? "heads" : "tails"}">${f == null ? "?" : faceIcon(f)}</div>`).join("");
+    /* The coin is built from CSS (radial gradients + a milled rim); the face is
+       an engraved mark, not a glyph. `.cf-face` is the 3D-rotating element so
+       the outer .cf-coin keeps its layout box for the agent's DOM reads. */
+    const faceMark = (f) => (f
+      ? `<span class="cf-mark cf-mark-h"></span>`
+      : `<span class="cf-mark cf-mark-t"></span>`);
+
+    function renderCoins(faces, animate) {
+      const wrap = view.querySelector("#cfCoins");
+      wrap.innerHTML = (faces || Array(coins).fill(null))
+        .map((f) => `<div class="cf-coin ${f == null ? "idle" : f ? "heads" : "tails"}">
+             <div class="cf-face">${f == null ? `<span class="cf-mark cf-mark-q"></span>` : faceMark(f)}</div>
+           </div>`).join("");
+      if (!animate || !faces) return;
+
+      /* GSAP 3D flip: multiple turns on Y, with a scale bump at the apex so the
+         coin reads as passing nearer the viewer rather than just spinning flat. */
+      const g = window.gsap;
+      if (!g || (Casino.fx && Casino.fx.reduced())) return;
+      wrap.querySelectorAll(".cf-face").forEach((face, i) => {
+        g.timeline({ delay: i * 0.08 })
+          .fromTo(face,
+            { rotationY: 0, scale: 0.86 },
+            { rotationY: 1080, duration: 0.82, ease: "power4.out", force3D: true })
+          .to(face, { scale: 1.14, duration: 0.34, ease: "power2.out" }, 0)
+          .to(face, { scale: 1, duration: 0.44, ease: "back.out(1.7)" }, 0.34);
+      });
     }
     function renderFair() {
       const el = view.querySelector("#cfFair");
@@ -107,7 +130,7 @@ const CoinflipGame = (() => {
       const el = view.querySelector("#cfHist");
       const d = document.createElement("div");
       d.className = "cf-hist-item " + (win ? "win" : "lose");
-      d.textContent = faces.map(faceIcon).join("");
+      d.innerHTML = faces.map((f) => `<i class="cf-pip ${f ? "h" : "t"}"></i>`).join("");
       el.prepend(d); while (el.children.length > 12) el.removeChild(el.lastChild);
     }
     function refresh() {
@@ -135,7 +158,7 @@ const CoinflipGame = (() => {
       let faces = Array.from({ length: coins }, (_, i) => coinFace(server, client, nonce, streak * 10 + i));
       // 😈 rig: make every coin match the pick
       if (Casino.cheat.win()) faces = faces.map(() => pick);
-      renderCoins(faces);
+      renderCoins(faces, true);
       const win = faces.every((f) => f === pick);
       pushHist(win, faces);
       if (win) {

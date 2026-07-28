@@ -83,7 +83,7 @@ const ChickenGame = (() => {
     function buildRoad() {
       const d = DIFFS[diff];
       track.innerHTML = "";
-      startCurb = Casino.el("div", "chk-curb chk-start", `<span class="chk-home">🏁</span>`);
+      startCurb = Casino.el("div", "chk-curb chk-start", `<span class="chk-home chk-home-start"></span>`);
       track.appendChild(startCurb);
       lanes = [];
       for (let i = 1; i <= d.steps; i++) {
@@ -96,9 +96,9 @@ const ChickenGame = (() => {
         track.appendChild(lane);
         lanes.push(lane);
       }
-      const fin = Casino.el("div", "chk-curb chk-finish", `<span class="chk-home">🏆</span>`);
+      const fin = Casino.el("div", "chk-curb chk-finish", `<span class="chk-home chk-home-end"></span>`);
       track.appendChild(fin);
-      chicken = Casino.el("div", "chk-chicken", "🐔");
+      chicken = Casino.el("div", "chk-chicken", `<span class="chk-orb"></span>`);
       track.appendChild(chicken);
       // place instantly at the start (no slide / camera glide)
       requestAnimationFrame(() => {
@@ -112,11 +112,16 @@ const ChickenGame = (() => {
     // Center `el` in the viewport by sliding the whole track (camera-follow).
     function moveTo(el, hop) {
       if (!el || !chicken) return;
+      /* Both the camera and the token move on translate3d, never left/top:
+         animating `left` relayouts the whole track (every lane and every car)
+         on each frame, which is what made the lane hops read as choppy. The
+         token keeps left:0 and is offset purely by transform. */
       const cx = el.offsetLeft + el.offsetWidth / 2;
-      chicken.style.left = (cx - chicken.offsetWidth / 2) + "px";
+      const tokenX = cx - chicken.offsetWidth / 2;
+      chicken.style.transform = `translate3d(${tokenX}px, -50%, 0)`;
       const viewW = stage.clientWidth, trackW = track.scrollWidth;
       const cam = Math.max(Math.min(0, viewW - trackW), viewW / 2 - cx);
-      track.style.transform = `translateX(${cam}px)`;
+      track.style.transform = `translate3d(${cam}px, 0, 0)`;
       if (hop) { chicken.classList.remove("hop"); void chicken.offsetWidth; chicken.classList.add("hop"); }
     }
 
@@ -182,7 +187,7 @@ const ChickenGame = (() => {
         targetLane.classList.add("crash");
         setTimeout(() => {
           chicken.classList.add("splat");
-          chicken.textContent = "💥";
+          chicken.classList.add("bust");
           Casino.sound.play("lose");
           endLoss();
         }, 320);

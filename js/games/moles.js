@@ -123,13 +123,13 @@ const MolesGame = (() => {
       revealed++;
       if (board[i]) { // mole!
         found++;
-        hole.classList.add("mole"); hole.textContent = "🐹";
+        hole.classList.add("mole"); hole.innerHTML = `<span class="mol-core"></span>`;
         Casino.sound.play("win");
         if (found >= moles) { updateStats(); cashOut(true); return; }
         msg.textContent = `Mole! ${multiplier(moles, found).toFixed(2)}× — keep going or cash out.`; msg.className = "win-banner win";
         updateStats();
       } else { // trap → bust
-        hole.classList.add("trap"); hole.textContent = "💥";
+        hole.classList.add("trap"); hole.innerHTML = `<span class="mol-x"></span>`;
         revealAll(i);
         phase = "over";
         startBtn.disabled = false; cashBtn.disabled = true; betInput.disabled = false; select.disabled = false;
@@ -144,7 +144,7 @@ const MolesGame = (() => {
         const h = grid.querySelector(`.mol-hole[data-i="${j}"]`);
         if (!h || h.classList.contains("done")) return;
         h.classList.add("done", "faint");
-        h.textContent = isMole ? "🐹" : "·";
+        h.innerHTML = isMole ? `<span class="mol-core"></span>` : `<span class="mol-dot"></span>`;
       });
     }
 
