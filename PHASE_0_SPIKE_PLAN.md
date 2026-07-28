@@ -12,6 +12,11 @@ platform design system. Phase 0 is allowed to look rough. It is not allowed to f
 
 ---
 
+> **STATUS: PASSED** — 2026-07-28, commit range `4353128..HEAD` on `feat/react-migration`.
+> All five exit criteria met with a live `qwen2.5:7b`; 38/38 Playwright assertions green.
+> `git status js/` is empty — the legacy agent ran **byte-for-byte unmodified**.
+> Measured evidence in §13.
+
 ## 0. Exit criteria — the spike passes only when all five are true
 
 | # | Criterion | How it is proven |
@@ -353,3 +358,57 @@ git push -u origin feat/react-migration
 The commit message records: the React 19 decision, the controlled-vs-uncontrolled decision, and the
 **measured** result of exit criteria 1–5. Per the working agreement — verify before claiming; do not
 report success from inference.
+
+---
+
+## 13. Results — measured, 2026-07-28
+
+Run against a live `qwen2.5:7b` on Ollama. `web/tests/`, 38 assertions, all green.
+
+### Exit criteria
+
+| # | Criterion | Result |
+|---|---|---|
+| 1 | All three adapters `detect()` their React routes | **PASS** — and `holdem.detect()` correctly returns `false` on `/#dice` |
+| 2 | An LLM-chosen stake reaches the wallet | **PASS** — see evidence below |
+| 3 | An LLM-chosen Dice target reaches the roll | **PASS** |
+| 4 | `[data-nav]` navigation works, collapsed and expanded, plus hash fallback | **PASS** |
+| 5 | ≥5-round agentic run, `getStats().net` matches the real balance delta | **PASS** — `net: 448`, balance delta `448` |
+
+### The evidence for criteria 2 & 3
+
+```
+[dice]   {"modelBet":150,"modelTarget":65,"fallback":false,
+          "wager":150,"lastStake":150,"targetShown":"65.00"}
+[mines]  {"modelMines":10,"selectValue":"10","wager":150,"lastStake":150}
+[holdem] {"actions":["fold"],"anyRealDecision":true,"rounds":1,"seated":false}
+```
+
+`fallback:false` means these were genuine model decisions, not the heuristic.
+`lastStake` is what the game actually took out of the wallet after reading `#betInput`,
+so `wager == lastStake` is the direct proof the number survived the DOM round-trip.
+`selectValue:"10"` proves the `<select>` path — the one the handoff brief omits.
+
+The agentic run escalated stakes 150 → 170 → 194 → 223 → 256 across Dice and Mines,
+confirming the tilt/bankroll logic still drives sizing through the React UI.
+
+### What changed relative to the plan
+
+1. **The capture-phase "normalisation" idea in the bridge was unsound and was cut.**
+   Re-writing the *same* value through the prototype setter leaves React's tracker cache
+   equal to the node, so the re-dispatched event is discarded exactly like the original.
+   Measured in `tests/tracker-probe.spec.ts`. The sound mechanism is the one the plan
+   chose up front: uncontrolled fields, read from the DOM at action time.
+2. **This surfaced a real bug in the Dice port.** `roll()` was computing the multiplier
+   from React `target` state, which the swallowed slider event leaves stale — the payout
+   would have been priced off the wrong odds. Fixed by reading `#slider` at roll time.
+3. **Hash routing is hand-rolled**, not `createHashRouter`. See `app/hashRoute.ts`.
+4. **React 19.2**, not the handoff's 18.
+
+### Not covered by this spike
+
+- The AI Lab control deck and HUD (Phase 2), and `agent-lab.js` / `agent-report.js`
+- `/api/sysmon` (served by `serve.py`; needs a proxy in Phase 2)
+- The 22 remaining games, and `tools/fx-test.html`'s 13 presentation assertions
+- Sound: `Casino.sound` is not in the compat object because no adapter calls it,
+  but the games do — Phase 1 needs to port the Web Audio synth

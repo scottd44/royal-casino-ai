@@ -24,6 +24,13 @@ type WalletState = {
   balance: number
   /** Stake currently in the bet field. The agent writes this via #betInput. */
   bet: number
+  /**
+   * The stake of the most recent ACCEPTED bet — i.e. what a game actually
+   * read out of #betInput and staked, as opposed to what the agent intended.
+   * Those two numbers diverging is precisely the silent-failure this whole
+   * migration risks, so it is worth recording rather than inferring.
+   */
+  lastStake: number
   cheatOn: boolean
   cheatStrength: number
 
@@ -42,6 +49,7 @@ export const useWalletStore = create<WalletState>()(
     (set, get) => ({
       balance: STARTING_BALANCE,
       bet: 20,
+      lastStake: 0,
       cheatOn: false,
       cheatStrength: DEFAULT_CHEAT_STRENGTH,
 
@@ -54,7 +62,7 @@ export const useWalletStore = create<WalletState>()(
         const v = Math.floor(Number(amount))
         if (!Number.isFinite(v) || v <= 0) return false
         if (v > get().balance) return false
-        set((s) => ({ balance: s.balance - v }))
+        set((s) => ({ balance: s.balance - v, lastStake: v }))
         return true
       },
 

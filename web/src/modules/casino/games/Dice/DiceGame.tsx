@@ -48,9 +48,16 @@ export default function DiceGame() {
   const multiplier = (100 / winChance) * HOUSE_EDGE
   const profit = betView > 0 ? betView * multiplier - betView : 0
 
-  // The adapter writes #slider with a raw value + an "input" event. An
-  // uncontrolled range needs that event mirrored into state for the odds
-  // readouts; onChange covers both the agent and a human dragging it.
+  // The adapter writes #slider with a raw value + an "input" event
+  // (agent-ui.js:650). React's tracker swallows that event, so onChange does
+  // NOT fire and `target` state stays stale — and `target` decides the
+  // multiplier, i.e. the payout. The DOM node is the source of truth for an
+  // uncontrolled field, so read it at roll time. Same rule as readBet().
+  const readTarget = () => {
+    const v = Number(sliderRef.current?.value)
+    return Number.isFinite(v) ? Math.max(2, Math.min(98, v)) : target
+  }
+
   const onSlider = (v: string) => setTarget(Number(v))
 
   useEffect(() => {
@@ -67,6 +74,13 @@ export default function DiceGame() {
       return
     }
 
+    // Authoritative for this round, and re-synced into state so the readouts
+    // catch up to whatever the agent picked.
+    const t = readTarget()
+    if (t !== target) setTarget(t)
+    const chance = mode === 'under' ? t : 100 - t
+    const mult = (100 / chance) * HOUSE_EDGE
+
     rollingRef.current = true
     setRolling(true)
     setOutcome(null)
@@ -75,10 +89,10 @@ export default function DiceGame() {
     if (cheatWin()) {
       result =
         mode === 'under'
-          ? Math.floor(Math.random() * target * 100) / 100
-          : target + 0.01 + Math.floor(Math.random() * (100 - target) * 100) / 100
+          ? Math.floor(Math.random() * t * 100) / 100
+          : t + 0.01 + Math.floor(Math.random() * (100 - t) * 100) / 100
     }
-    const won = mode === 'under' ? result < target : result > target
+    const won = mode === 'under' ? result < t : result > t
 
     // Anticipation before resolution — ~500ms of tension, per handoff §7.
     // setInterval, not rAF: a backgrounded tab must still settle the round or
@@ -92,11 +106,11 @@ export default function DiceGame() {
         setOutcome(won ? 'win' : 'lose')
 
         if (won) {
-          const won_amount = Math.floor(stake * multiplier)
-          payout(won_amount)
-          setMsg(`${result.toFixed(2)} is ${mode} ${target} — won +${fmt(won_amount - stake)}!`)
+          const winnings = Math.floor(stake * mult)
+          payout(winnings)
+          setMsg(`${result.toFixed(2)} is ${mode} ${t} — won +${fmt(winnings - stake)}!`)
         } else {
-          setMsg(`${result.toFixed(2)} is not ${mode} ${target}. You lose.`)
+          setMsg(`${result.toFixed(2)} is not ${mode} ${t}. You lose.`)
         }
 
         setHistory((h) => [...h.slice(-9), { roll: result, win: won }])

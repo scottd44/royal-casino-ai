@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { PanelLeft } from 'lucide-react'
 import Sidebar from './Sidebar'
 import { useWalletStore } from '@/platform/money/walletStore'
 import { money } from '@/platform/money/format'
+import { useAgentStore } from '@/platform/agent/useAgent'
 
 /* ============================================================
    The shell. DEVELOPMENT_GUIDE.md §3b:
@@ -26,6 +27,13 @@ import { money } from '@/platform/money/format'
 export default function AppShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false)
   const balance = useWalletStore((s) => s.balance)
+  const boot = useAgentStore((s) => s.boot)
+
+  // Boot the legacy agent once. bootLegacyAgent is idempotent, which matters
+  // because StrictMode runs this effect twice in dev.
+  useEffect(() => {
+    void boot()
+  }, [boot])
 
   return (
     <div
