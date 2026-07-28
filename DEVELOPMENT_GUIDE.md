@@ -40,7 +40,7 @@ Then open `http://localhost:PORT`. **Do not add a server or a build pipeline.**
 | Libraries must load from a plain `<script>` (UMD) or `<script type="module">` (ESM) | There is no bundler to resolve `import` from `node_modules` |
 | Prefer **vendoring** the single minified file into `js/vendor/` over a CDN link | The app is designed to run locally and offline |
 | No `import` / `export` in app code | Every file is a classic script sharing one global scope |
-| Every asset in `index.html` carries `?v=N` | **Bump it on every release** or browsers serve stale files. Currently **`v=36`** |
+| Every asset in `index.html` carries `?v=N` | **Bump it on every release** or browsers serve stale files. Currently **`v=43`** |
 
 ### Module pattern
 
@@ -74,7 +74,7 @@ works with no network.
 |---|---|---|---|---|
 | [GSAP](https://gsap.com/docs/v3/) | 3.12.5 | `js/vendor/gsap.min.js` | `window.gsap` | Route transitions, staggered lobby/card reveals, micro-interactions |
 | [CountUp.js](https://github.com/inorganik/countUp.js) | 2.8.0 | `js/vendor/countUp.umd.js` | `window.countUp.CountUp` | Wallet ticker, AI Lab telemetry counters |
-| [canvas-confetti](https://github.com/catdad/canvas-confetti) | 1.9.3 | `js/vendor/confetti.browser.min.js` | `window.confetti` | Cash-out / jackpot bursts |
+| [canvas-confetti](https://github.com/catdad/canvas-confetti) | 1.9.2 | `js/vendor/confetti.browser.min.js` | `window.confetti` | Cash-out / jackpot bursts |
 
 They are loaded **before** `core.js` in `index.html`, each with the `?v=` cache-buster.
 
@@ -108,16 +108,36 @@ Casino.fx.reveal(nodes, { y, stagger, delay })   // staggered entrance (GSAP)
 Casino.fx.enter(el, { y })                       // fade/slide a container in (route change)
 ```
 
-Two things worth knowing:
+Where each library is wired:
 
-- **Confetti is already wired to every game.** `Casino.sound.play("bigwin")` and
-  `play("cashout")` fire a throttled burst, so all 25 games celebrate without a single game module
-  being edited. If you add a new game, just play the existing sound names.
-- **`reveal()` and `enter()` arm a watchdog.** An entrance animation hides its targets first, so a
-  tween that never finishes would leave the UI blank. Both helpers `setTimeout` a cleanup that
-  strips the inline styles once the tween should be done — a no-op normally, a safety net if rAF is
-  throttled (backgrounded tab, headless browser) or GSAP is absent. **Keep that pattern if you write
-  your own reveal.**
+| Library | Wired in | What it drives |
+|---|---|---|
+| GSAP | `js/app.js` | Staggered lobby-card reveals, VIP/guide card cascades, game-view mount transitions |
+| CountUp.js | `js/core.js` | Wallet balance ticks on every bet/payout |
+| CountUp.js | `js/agent/agent-lab.js` | Live telemetry deck tiles |
+| CountUp.js | `js/agent/agent-report.js` | Session-report figures count up from zero when the modal opens |
+| canvas-confetti | `js/core.js` — `payout()` | Bursts scaled to the win: ≥15% of bankroll → cash-out, ≥40% → big, ≥150% → jackpot |
+| canvas-confetti | `js/core.js` — `sound.play()` | A second trigger on `bigwin` / `cashout` so a small stake on a huge multiplier still celebrates |
+
+Because both confetti triggers live in `core.js`, **all 25 games celebrate without a single game
+module being edited.** `fx.burst()` throttles the two paths together (one burst per 700 ms).
+
+### Three failure-mode rules learned the hard way
+
+1. **Never animate a persistent mount point.** `#view` is never replaced, so a tween that stalls or
+   is interrupted leaves inline `opacity`/`transform` on it — and the *entire app* renders blank.
+   `fx.enter()` animates the container's **children** (destroyed on the next render, therefore
+   self-healing) and `fx.resetMount()` is called before every route render. This exact bug shipped
+   once; don't reintroduce it.
+2. **Every hide-then-reveal arms a watchdog.** An entrance animation hides its targets first, so
+   `fx.reveal()` / `fx.enter()` `setTimeout` a cleanup that strips the inline styles once the tween
+   should be done. A no-op normally; a safety net when rAF is throttled (backgrounded tab, headless
+   browser) or GSAP is missing. Staggers are capped at 0.6 s total so a 25-card grid can never keep
+   content hidden for long.
+3. **A stalled counter shows a *wrong number*, not just a missing animation.** `fx.countTo()` snaps
+   to the true value after the expected duration, guarded by a per-element token so a stale
+   watchdog can't overwrite a newer count. Never start counters inside `requestAnimationFrame` —
+   rAF can be suspended indefinitely and the figures would stay at zero.
 
 Motion is globally dialled down by a `@media (prefers-reduced-motion: reduce)` block at the bottom
 of `styles.css`. Respect it — don't animate with `setInterval` to sidestep it.
@@ -239,13 +259,11 @@ game's `detect()` and `play()` must survive. Restyle **classes and wrappers only
 | hilo | `#higherBtn` `#hiloCard` | keno | `#knBoard` + `KenoAPI` |
 | tower | `#towerGrid` `#towerStart` | plinko | `#dropBtn` `#plinkoStage` |
 | wheel | `#wheelBtn` `#wheelStage` | holdem | `#hcControls` + `HoldemAPI` |
-| chicken | `#chkCross` **`#chkRoad`** ⚠️ | | |
+| chicken | `#chkCross` `#chkStage` | | |
 
-> ⚠️ **Known pre-existing bug:** the `chicken` adapter's `detect()` requires `#chkRoad`, but
-> `js/games/chicken.js` renders `#chkStage` / `#chkTrack` — there is no `#chkRoad` anywhere in the
-> repo, and there never was. `detect()` therefore always returns `false` and the agent can never
-> play Chicken Road. The one-line fix is in `agent-ui.js`: change `$("#chkRoad")` to `$("#chkStage")`.
-> It is left as-is here because it is agent logic, outside the scope of the visual overhaul.
+> **Fixed in this release:** the `chicken` adapter's `detect()` required `#chkRoad`, which does
+> not exist anywhere in the repo — `js/games/chicken.js` renders `#chkStage` / `#chkTrack`. It
+> always returned `false`, so the agent could never play Chicken Road. Corrected to `#chkStage`.
 
 ### The Lab's own contract
 
@@ -345,7 +363,7 @@ for f in js/*.js js/agent/*.js js/games/*.js; do node --check "$f" || echo "FAIL
 
 There is no test runner, but `tools/smoke-test.html` drives a full end-to-end pass: it loads
 `index.html` in a same-origin iframe and asserts against `contentWindow.RoyalAgent` and
-`eval("Casino")`. **52 assertions** covering control wiring, the brainpower stages, routing (both
+`eval("Casino")`. **65 assertions** covering control wiring, the brainpower stages, routing (both
 `[data-nav]` clicks and the hash fallback), the 😈 rig, a live Ollama run, telemetry, the HUD, and
 agentic free-roam across multiple tables. It is not referenced by `index.html`, so it ships inert.
 

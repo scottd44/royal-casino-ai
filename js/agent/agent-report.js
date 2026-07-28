@@ -75,6 +75,29 @@
   }
   function chip(k, v, cls = "") { return `<div class="lab-stat"><div class="lab-stat-k">${k}</div><div class="lab-stat-v ${cls}">${v}</div></div>`; }
 
+  /* Numeric report chips tick up from zero with CountUp.js when the modal
+     opens. `pending` is filled while the markup is built, then played back
+     once the nodes are actually in the DOM. */
+  let pending = [];
+  function numChip(k, value, format, cls = "") {
+    const id = "rNum" + pending.length;
+    pending.push({ id, to: Number(value) || 0, format });
+    return `<div class="lab-stat"><div class="lab-stat-k">${k}</div>
+      <div class="lab-stat-v ${cls}" id="${id}">${format(0)}</div></div>`;
+  }
+  /* Started synchronously, NOT inside requestAnimationFrame: rAF can be
+     suspended indefinitely (background tab), which would leave every figure
+     in the report reading zero. Casino.fx.countTo animates when it can and
+     snaps to the true value either way. */
+  function playCounters() {
+    const list = pending;
+    pending = [];
+    list.forEach((p) => {
+      const el = $(p.id);
+      if (el) Casino.fx.countTo(el, 0, p.to, p.format);
+    });
+  }
+
   function renderChart(report) {
     const c = $("rChart");
     const rounds = report.rounds || [];
@@ -127,23 +150,25 @@
     const netCls = report.net > 0 ? "pos" : report.net < 0 ? "neg" : "";
     const perGame = Object.entries(report.perGameNet)
       .map(([k, v]) => `${k} ${v >= 0 ? "+" : "-"}${money(v)}`).join(" · ") || "—";
-    const chips = [chip("Wallet net", (report.net >= 0 ? "+" : "-") + money(report.net), netCls)];
+    const signed = (n) => (n >= 0 ? "+" : "-") + money(n);
+    const chips = [numChip("Wallet net", report.net, signed, netCls)];
     if (report.borrowed > 0) {
-      chips.push(chip("Borrowed (debt)", money(report.borrowed), "neg"));
-      chips.push(chip("Real result", (report.netWithDebt >= 0 ? "+" : "-") + money(report.netWithDebt), report.netWithDebt < 0 ? "neg" : "pos"));
+      chips.push(numChip("Borrowed (debt)", report.borrowed, money, "neg"));
+      chips.push(numChip("Real result", report.netWithDebt, signed, report.netWithDebt < 0 ? "neg" : "pos"));
     }
     chips.push(
       chip("Start → End", `${money(report.startCredits)} → ${money(report.endCredits)}`),
-      chip("Rounds", s.rounds),
-      chip("Win rate", (s.winRate * 100).toFixed(0) + "%"),
+      numChip("Rounds", s.rounds, (v) => fmt(v)),
+      numChip("Win rate", s.winRate * 100, (v) => v.toFixed(0) + "%"),
       chip("W / L", `${s.wins} / ${s.losses}`),
-      chip("Biggest win", "+" + money(report.biggestWin), "pos"),
-      chip("Biggest loss", money(report.biggestLoss), report.biggestLoss < 0 ? "neg" : ""),
+      numChip("Biggest win", report.biggestWin, (v) => "+" + money(v), "pos"),
+      numChip("Biggest loss", report.biggestLoss, money, report.biggestLoss < 0 ? "neg" : ""),
       chip("Longest W/L", `${s.maxWinStreak}/${s.maxLossStreak}`),
-      chip("Total wagered", money(s.totalWagered)),
+      numChip("Total wagered", s.totalWagered, money),
       chip("Per game", perGame),
     );
     $("rStats").innerHTML = chips.join("");
+    playCounters();
 
     const u = report.swings.upswing, d = report.swings.downswing;
     $("rUp").innerHTML = u.amount > 0

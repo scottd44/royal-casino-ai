@@ -63,13 +63,23 @@ const Casino = (() => {
     return true;
   }
 
-  /* Pay credits into the wallet (winnings, refunds, cash-out). */
+  /* Pay credits into the wallet (winnings, refunds, cash-out).
+     Every game funnels its winnings through here, so this is also where a
+     big score triggers a particle burst — no game module needs to know.
+     "Big" is judged against the bankroll the win landed on, so it scales
+     with the player instead of being a fixed dollar threshold. */
   function payout(amount) {
     amount = Math.round(Number(amount));
     if (!Number.isFinite(amount) || amount <= 0) return;
+    const before = balance;
     balance += amount;
     save();
     renderBalance(1);
+
+    const ratio = amount / Math.max(before, 1);
+    if (ratio >= 1.5 || amount >= 20000) fx.burst("jackpot");
+    else if (ratio >= 0.4 || amount >= 4000) fx.burst("big");
+    else if (ratio >= 0.15) fx.burst("cashout");
   }
 
   /* Direct adjustment without validation (used for add-funds / reset). */
@@ -226,17 +236,12 @@ const Casino = (() => {
       lose:    () => { tone(220, 0, 0.18, "sawtooth", 0.12); tone(155, 0.13, 0.32, "sawtooth", 0.12); },
     };
 
-    // Confetti rides along with the celebration sounds, so all 25 games get
-    // cash-out / jackpot bursts without a single game module being edited.
-    // Throttled so a rapid streak can't spam the canvas.
-    let lastBurst = 0;
+    // Second confetti trigger: games that announce a jackpot or a cash-out via
+    // sound get a burst even when the dollar amount is modest (e.g. a small
+    // stake on a huge multiplier). fx.burst() throttles the two paths together.
     function celebrate(name) {
       const kind = name === "bigwin" ? "big" : name === "cashout" ? "cashout" : null;
-      if (!kind) return;
-      const now = Date.now();
-      if (now - lastBurst < 700) return;
-      lastBurst = now;
-      fx.burst(kind);
+      if (kind) fx.burst(kind);
     }
 
     function play(name) {
@@ -289,31 +294,54 @@ const Casino = (() => {
     const reduced = () => !!(mq && mq.matches);
     const CountUpCtor = () => (window.countUp && window.countUp.CountUp) || null;
 
+    /* Every countTo stamps the element with a token. A later countTo on the
+       same element bumps it, so a stale watchdog can never overwrite a newer
+       animation's target. */
+    let countToken = 0;
+
     /** Tick `el` from `from` to `to`. `format` renders the number. */
     function countTo(el, from, to, format = fmt) {
       if (!el) return;
       const C = CountUpCtor();
       const diff = Math.abs(to - from);
+      const mine = (el.__fxCount = ++countToken);
+
       if (!C || reduced() || diff < 1 || diff > 5_000_000) {
         el.textContent = format(to);
         return;
       }
+      const duration = Math.min(1.1, 0.28 + Math.log10(diff + 1) * 0.22);
       try {
         const cu = new C(el, to, {
           startVal: from,
-          duration: Math.min(1.1, 0.28 + Math.log10(diff + 1) * 0.22),
+          duration,
           useEasing: true,
           separator: ",",
           formattingFn: format,
         });
         if (cu.error) { el.textContent = format(to); return; }
         cu.start();
-      } catch { el.textContent = format(to); }
+      } catch { el.textContent = format(to); return; }
+
+      /* A stalled counter would leave a WRONG number on screen (e.g. "+$89"
+         for a $750 result), so this is a correctness guarantee, not polish:
+         once the animation should be over, snap to the true value. */
+      setTimeout(() => {
+        if (el.__fxCount !== mine) return; // superseded by a newer count
+        const target = format(to);
+        if (el.textContent !== target) el.textContent = target;
+      }, duration * 1000 + 350);
     }
 
-    /** Confetti burst. kind: "big" | "cashout" | "jackpot". */
+    /** Confetti burst. kind: "big" | "cashout" | "jackpot".
+        Throttled here rather than at the call sites, because both payout()
+        and the celebration sounds can fire for the same win. */
+    let lastBurst = 0;
     function burst(kind = "cashout") {
       if (typeof window.confetti !== "function" || reduced()) return;
+      const now = Date.now();
+      if (now - lastBurst < 700) return;
+      lastBurst = now;
       const gold = ["#f0c24f", "#ffdc86", "#ab7f16"];
       const neon = ["#22e59a", "#a97bff", "#4d8cff", "#f0c24f"];
       try {

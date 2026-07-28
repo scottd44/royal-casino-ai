@@ -200,6 +200,39 @@ async function run() {
     ok("agentic rounds recorded", s2.rounds >= 3, s2.rounds);
     ok("per-game strip rendered", d.getElementById("labGames").textContent.trim().length > 0);
 
+    // ---- canvas-confetti fires from the payout state in core.js ----
+    await sleep(900); // fx.burst throttles to 1 per 700ms; clear any burst the agent run just fired
+    let confettiCalls = 0;
+    const realConfetti = w.confetti;
+    w.confetti = function () { confettiCalls++; return realConfetti.apply(this, arguments); };
+    C.setBalance(1000);
+    C.payout(50);                       // small win -> no burst
+    const afterSmall = confettiCalls;
+    C.payout(3000);                     // 3x the bankroll -> jackpot burst
+    await sleep(50);
+    ok("confetti: small win does not burst", afterSmall === 0, "calls=" + afterSmall);
+    ok("confetti: big payout bursts", confettiCalls > 0, "calls=" + confettiCalls);
+    w.confetti = realConfetti;
+
+    // ---- CountUp drives the session-report counters (agent-report.js) ----
+    w.RoyalReport.show({
+      trigger: "smoke", durationMs: 60000, gamesPlayed: ["dice"], model: "qwen2.5:7b",
+      startCredits: 1000, endCredits: 1750, net: 750, netWithDebt: 750, borrowed: 0,
+      biggestWin: 400, biggestLoss: -120, perGameNet: { dice: 750 },
+      swings: { upswing: { amount: 500, from: 1, to: 4, game: "dice" },
+                downswing: { amount: 120, from: 5, to: 6, game: "dice" } },
+      breaks: [], desperateMeasures: [], rounds: [{ balance: 1200 }, { balance: 1750 }],
+      narrative: "smoke test", stats: { rounds: 6, wins: 4, losses: 2, winRate: 0.667,
+        maxWinStreak: 3, maxLossStreak: 1, totalWagered: 900 },
+    });
+    const netNode = d.querySelector("#rStats .lab-stat-v");
+    const startTxt = netNode.textContent;
+    await sleep(1400);
+    const endTxt = netNode.textContent;
+    ok("report counter starts at zero", /\$0$/.test(startTxt), "'" + startTxt + "'");
+    ok("report counter counts up to value", endTxt === "+$750", "'" + startTxt + "' -> '" + endTxt + "'");
+    d.getElementById("rClose").click();
+
     log("\nDONE");
   } catch (e) {
     log("EXCEPTION: " + (e && e.stack || e));
