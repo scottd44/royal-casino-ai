@@ -174,7 +174,9 @@
   // visible height so nothing is ever hidden behind it (push, not overlay).
   function updateBodyPadding() {
     const collapsed = lab.classList.contains("collapsed");
-    document.body.style.paddingBottom = (collapsed ? 52 : lab.offsetHeight) + "px";
+    // Clearance belongs to the scrolling pane; body no longer scrolls.
+    const pane = document.querySelector(".app-main") || document.body;
+    pane.style.paddingBottom = (collapsed ? 52 : lab.offsetHeight) + "px";
     syncHudVisibility(); // the HUD floats just above the dock — keep it clear
   }
 

@@ -53,8 +53,10 @@
   --ease: cubic-bezier(0.22, 0.8, 0.28, 1);
 }
 
-/* Collapsed sidebar just narrows the track; every [data-nav] link
-   stays in the DOM so the AI agent can still click through to it. */
+/* Collapsed sidebar just narrows the grid track; every [data-nav] link stays
+   in the DOM so the AI agent can still click through to it. */
+body.sb-collapsed .app-shell,
+body.sb-collapsed.has-shell { --sbw: var(--sbw-min); }
 body.sb-collapsed { --sbw: var(--sbw-min); }
 
 * { box-sizing: border-box; }
@@ -104,36 +106,58 @@ input:focus-visible, select:focus-visible { box-shadow: none; }
 }
 
 /* ============================================================
-   Shell — fixed sidebar + main column
+   SHELL — two independent scroll panes
+   ------------------------------------------------------------
+   The page itself does not scroll. The shell is a full-height
+   grid; the sidebar is a grid CELL (not a sticky element) and
+   .app-main is the only scrolling region.
+
+   Why not sticky: `position: sticky` anchors to the nearest
+   scroll container, and any `overflow` on html/body silently
+   makes BODY that container — at which point the sidebar
+   scrolls away with the document and its 100vh background ends
+   mid-page. A grid cell cannot do that; there is no scroll for
+   it to fall out of. This is why the previous three fixes kept
+   regressing.
    ============================================================ */
-.app-shell { display: flex; min-height: 100vh; align-items: flex-start; }
+html, body { height: 100%; }
+body { overflow: hidden; }
+
+.app-shell {
+  display: grid;
+  grid-template-columns: var(--sbw) 1fr;
+  height: 100vh;
+  height: 100dvh;              /* mobile browser chrome-aware */
+  overflow: hidden;
+  transition: grid-template-columns 0.2s var(--ease);
+}
 .app-main {
-  flex: 1;
   min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  scrollbar-gutter: stable;
 }
 
 /* ---------- Sidebar ---------- */
 .sidebar {
-  position: sticky;
-  top: 0;
   z-index: 60;
-  flex: 0 0 var(--sbw);
-  width: var(--sbw);
-  height: 100vh;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;            /* .sb-nav owns the scrolling */
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, rgba(15, 20, 31, 0.94), rgba(8, 11, 18, 0.94));
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border-right: 1px solid var(--line);
-  /* Width/flex-basis are layout properties, so each frame of this relayouts
-     the main column. Kept short deliberately: the longer it runs, the more it
-     reads as lag rather than motion, and a second click during the tail feels
-     like the button is dead. */
-  transition: flex-basis 0.2s var(--ease), width 0.2s var(--ease), transform 0.24s var(--ease);
+  /* The rail's width is animated by the GRID (grid-template-columns above),
+     not by the sidebar itself — one transition on one property, instead of
+     flex-basis and width racing each other. */
+  transition: transform 0.24s var(--ease);
 }
 
 .sb-head {
@@ -321,35 +345,44 @@ body.sb-collapsed .sb-collapse { width: 100%; height: 40px; transform: rotate(18
   opacity: 0; visibility: hidden;
   transition: opacity 0.24s ease, visibility 0.24s;
 }
-.sb-toggle { display: none; }
+/* ONE control per breakpoint, never both on screen at once:
+     desktop  -> .sb-collapse (chevron, inside the rail)
+     mobile   -> .sb-toggle   (hamburger, in the top bar)
+   Two buttons doing the same job side by side was the redundancy in the
+   header; each is now hidden at the breakpoint where the other applies. */
+/* Scoped to .topbar so these beat `.icon-btn { display: inline-flex }`, which
+   sits later in the file and would otherwise win on source order alone —
+   that is why the hamburger stayed visible next to the chevron on desktop. */
+.topbar .sb-toggle { display: none; }
+.sb-head .sb-collapse { display: inline-flex; }
 
 @media (max-width: 900px) {
+  /* Below the breakpoint there is no icon rail — the sidebar is an overlay
+     drawer, so the grid collapses to a single column and the desktop
+     "collapsed" state is fully neutralised. */
+  .app-shell { grid-template-columns: 1fr; }
   .sidebar {
     position: fixed;
     left: 0; top: 0;
-    --sbw: 262px;
-    flex-basis: var(--sbw);
+    width: 262px;
+    max-width: 86vw;
     transform: translateX(-102%);
     box-shadow: var(--shadow-3);
   }
   body.sb-open .sidebar { transform: none; }
   body.sb-open .sb-scrim { opacity: 1; visibility: visible; }
-  /* Below the breakpoint the sidebar is always a full-width drawer — the
-     desktop-only "collapsed" (icon rail) state never applies here, so every
-     collapsed override above (including brand-name's max-width) is undone. */
-  body.sb-collapsed { --sbw: 262px; }
-  body.sb-collapsed .sb-label { opacity: 1; pointer-events: auto; }
+
+  body.sb-collapsed .sb-label,
   body.sb-collapsed .sb-txt { max-width: none; opacity: 1; pointer-events: auto; }
-  body.sb-collapsed .sb-tag {
-    max-width: none; opacity: 1; pointer-events: auto; padding: 2px 6px;
-  }
+  body.sb-collapsed .sb-tag { max-width: none; opacity: 1; pointer-events: auto; padding: 2px 6px; }
   body.sb-collapsed .brand-name { max-width: 200px; opacity: 1; pointer-events: auto; }
   body.sb-collapsed .brand { max-width: none; opacity: 1; pointer-events: auto; gap: 10px; }
-  body.sb-collapsed .sb-head { justify-content: flex-start; gap: 8px; }
-  body.sb-collapsed .sb-collapse { width: 26px; height: 40px; }
+  body.sb-collapsed .sb-head { justify-content: flex-start; gap: 8px; padding: 0 14px 0 18px; }
   body.sb-collapsed .sb-item { justify-content: flex-start; padding: 9px 12px; gap: 11px; }
-  .sb-toggle { display: inline-flex; }
-  .sb-collapse { display: none; }
+  body.sb-collapsed .sb-nav { scrollbar-width: thin; }
+
+  .topbar .sb-toggle { display: inline-flex; }
+  .sb-head .sb-collapse { display: none; }
 }
 
 /* ---------- Top bar ---------- */
@@ -2064,7 +2097,9 @@ input[type="range"].dice-slider::-moz-range-thumb {
 }
 
 /* ---------- AI Lab drawer / Control Deck ---------- */
-body { padding-bottom: 52px; transition: padding-bottom 0.28s ease; } /* JS keeps this in sync with the drawer height */
+/* The AI Lab dock overlays the bottom of the scrolling pane, so the pane —
+   not body — carries the clearance. agent-lab.js keeps this in sync. */
+.app-main { padding-bottom: 52px; transition: padding-bottom 0.28s ease; }
 
 .ai-lab {
   position: fixed;
@@ -2934,8 +2969,9 @@ input.lab-input { font-variant-numeric: tabular-nums; }
   .hero-actions .btn { flex: 1 1 auto; }
 }
 
-/* Nothing should ever scroll the page sideways. */
-html, body { overflow-x: hidden; }
+/* Horizontal overflow is contained by .app-main's own overflow-x, NOT by
+   html/body. Putting overflow on body makes it a scroll container, which
+   re-anchors position:sticky and was what cut the sidebar off mid-page. */
 .app-main { max-width: 100%; }
 
 /* ============================================================

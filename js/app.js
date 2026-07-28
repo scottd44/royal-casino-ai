@@ -118,40 +118,73 @@
     document.title = (byId(id)?.name || (PAGES[id] || PAGES.lobby).title) + " · Royal Casino";
   }
 
-  /* ---------- Sidebar controls ----------
-     Two affordances, one behaviour each per breakpoint:
-       · #sbCollapse (chevron, in the rail)  — desktop only, collapses to icons
-       · #sbToggle   (hamburger, in the top bar) — opens the drawer on mobile,
-         and mirrors the collapse on desktop, where it is still visible.
-     Bound by delegation on document so the handlers survive any re-render of
-     the header or rail, and can never be lost by an innerHTML rewrite. */
+  /* ============================================================
+     SIDEBAR — one state, one writer, one listener
+     ------------------------------------------------------------
+     Exactly two booleans exist, and each is owned by one function:
+
+       collapsed  desktop icon-rail   -> body.sb-collapsed  (persisted)
+       open       mobile drawer       -> body.sb-open       (never persisted)
+
+     Every mutation goes through setSidebar(). Nothing else in the app
+     touches these classes, so the two states can never desync — which is
+     what made the old buttons freeze after a handful of clicks.
+
+     All visual movement is CSS (grid-template-columns / transform). JS only
+     ever flips a class; it never animates, measures or writes inline styles.
+
+     The listener is registered once, on document, and matches by closest()
+     — so it survives any innerHTML rewrite of the header or rail and can
+     never be double-bound by a re-render.
+     ============================================================ */
   const SB_KEY = "royal_casino_sidebar_collapsed_v1";
-  if (localStorage.getItem(SB_KEY) === "1") document.body.classList.add("sb-collapsed");
+  const mqDrawer = window.matchMedia("(max-width: 900px)");
 
-  const isDrawer = () => window.matchMedia("(max-width: 900px)").matches;
-  const closeSidebar = () => document.body.classList.remove("sb-open");
+  const sidebarState = {
+    collapsed: localStorage.getItem(SB_KEY) === "1",
+    open: false,
+  };
 
-  function toggleCollapse() {
-    const on = document.body.classList.toggle("sb-collapsed");
-    localStorage.setItem(SB_KEY, on ? "1" : "0");
+  /** The single writer. Pass only the keys you intend to change. */
+  function setSidebar(patch) {
+    Object.assign(sidebarState, patch);
+    // Drawer state is meaningless on desktop; force it off so a stale `open`
+    // can never leave the scrim mounted after a resize.
+    if (!mqDrawer.matches) sidebarState.open = false;
+
+    const b = document.body;
+    b.classList.toggle("sb-collapsed", sidebarState.collapsed);
+    b.classList.toggle("sb-open", sidebarState.open);
+
+    if ("collapsed" in patch) {
+      localStorage.setItem(SB_KEY, sidebarState.collapsed ? "1" : "0");
+    }
   }
 
+  const closeSidebar = () => setSidebar({ open: false });
+
   document.addEventListener("click", (e) => {
+    // Desktop rail chevron
     if (e.target.closest("#sbCollapse")) {
       e.stopPropagation();
-      toggleCollapse();
+      setSidebar({ collapsed: !sidebarState.collapsed });
       return;
     }
+    // Mobile hamburger
     if (e.target.closest("#sbToggle")) {
       e.stopPropagation();
-      // Above the breakpoint there is no drawer to open, so the hamburger
-      // would otherwise be an inert control sitting in the header.
-      if (isDrawer()) document.body.classList.toggle("sb-open");
-      else toggleCollapse();
+      setSidebar({ open: !sidebarState.open });
       return;
     }
     if (e.target.closest("#sbScrim")) closeSidebar();
   });
+
+  // Crossing the breakpoint re-normalises both flags in one place.
+  mqDrawer.addEventListener("change", () => setSidebar({}));
+  // Escape always closes the drawer.
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSidebar(); });
+
+  setSidebar({});   // paint the persisted state on load
 
   /* ============================================================
      Lobby
@@ -608,7 +641,9 @@
     currentRoute = id;
     setActiveNav(id);
     closeSidebar();
-    window.scrollTo({ top: 0, behavior: Casino.fx.reduced() ? "auto" : "smooth" });
+    // .app-main is the scroll pane now, not the window.
+    const pane = document.querySelector(".app-main");
+    (pane || window).scrollTo({ top: 0, behavior: Casino.fx.reduced() ? "auto" : "smooth" });
     // Keep the hash authoritative — agent-ui's currentGameId() reads it.
     const hash = id === "lobby" ? "" : id;
     if (location.hash.replace("#", "") !== hash) location.hash = hash;

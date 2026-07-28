@@ -40,7 +40,7 @@ Then open `http://localhost:PORT`. **Do not add a server or a build pipeline.**
 | Libraries must load from a plain `<script>` (UMD) or `<script type="module">` (ESM) | There is no bundler to resolve `import` from `node_modules` |
 | Prefer **vendoring** the single minified file into `js/vendor/` over a CDN link | The app is designed to run locally and offline |
 | No `import` / `export` in app code | Every file is a classic script sharing one global scope |
-| Every asset in `index.html` carries `?v=N` | **Bump it on every release** or browsers serve stale files. Currently **`v=64`** |
+| Every asset in `index.html` carries `?v=N` | **Bump it on every release** or browsers serve stale files. Currently **`v=66`** |
 
 ### Module pattern
 
@@ -199,6 +199,51 @@ module being edited.** `fx.burst()` throttles the two paths together (one burst 
 
 Motion is globally dialled down by a `@media (prefers-reduced-motion: reduce)` block at the bottom
 of `styles.css`. Respect it — don't animate with `setInterval` to sidestep it.
+
+---
+
+## 3b. The application shell
+
+The page **does not scroll**. `.app-shell` is a full-height CSS grid; `.app-main` is the only
+scrolling region.
+
+```
+body                     height:100%; overflow:hidden
+└ .app-shell             grid-template-columns: var(--sbw) 1fr; height:100dvh
+  ├ .sidebar             grid cell, height:100%  (.sb-nav scrolls inside it)
+  └ .app-main            height:100%; overflow-y:auto   ← the scroller
+```
+
+**Never make the sidebar `position: sticky`.** Sticky anchors to the nearest scroll container, and
+*any* `overflow` on `html`/`body` silently promotes body to that role — at which point the sidebar
+scrolls away with the document and its `100vh` background ends mid-page. That bug shipped three
+times. A grid cell has no scroll to fall out of. For the same reason, horizontal overflow is
+contained by `.app-main { overflow-x: hidden }`, **never** by `html, body`.
+
+Consequences to remember:
+- Scroll the pane, not the window: `document.querySelector(".app-main").scrollTo(...)`.
+- Bottom clearance for the AI Lab dock lives on `.app-main`'s `padding-bottom` (agent-lab.js).
+- The rail's width is animated by `grid-template-columns` on `.app-shell` — one transition on one
+  property. Don't reintroduce `width`/`flex-basis` transitions on `.sidebar`; they race.
+
+### Sidebar state
+
+Two booleans, one writer:
+
+| state | class | scope | persisted |
+|---|---|---|---|
+| `collapsed` | `body.sb-collapsed` | desktop icon rail | yes |
+| `open` | `body.sb-open` | mobile drawer | no |
+
+Everything goes through `setSidebar(patch)` in `app.js`. Nothing else may touch those classes — two
+writers is what made the old buttons desync and freeze. JS only flips a class; **all** movement is
+CSS. The click listener is registered once on `document` and matches with `closest()`, so it
+survives any `innerHTML` rewrite and can't be double-bound.
+
+One control per breakpoint, never both: `#sbCollapse` (chevron, in the rail) above 900px,
+`#sbToggle` (hamburger, in the header) below. Their `display` rules are scoped
+(`.topbar .sb-toggle`, `.sb-head .sb-collapse`) so they outrank `.icon-btn { display: inline-flex }`,
+which sits later in the file and otherwise wins on source order.
 
 ---
 
