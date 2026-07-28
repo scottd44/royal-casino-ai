@@ -201,7 +201,27 @@ The three real call sites in `js/agent/agent-ui.js`:
 |---|---|---|---|
 | 296 | `if (input) input.value = v` in `applyBet()` | `#betInput` — `<input type="number">` | yes |
 | 650 | `slider.value = target` (then dispatches `input`) | `#slider` — `<input type="range">` | **no — looks safe, is not** |
-| 678 | `$("#mineSelect").value = String(mineCount)` | `#mineSelect` — `<select>` | **no — wrong prototype, wrong event** |
+| 678 | `$("#mineSelect").value = String(mineCount)` | `#mineSelect` — `<select>` | **no — not mentioned at all** |
+
+### Measured against React 19.2 — `web/tests/shim.spec.ts`, 8/8 green
+
+The three call sites all break, but **not all for the same reason**, and one of them
+is not the reason predicted above:
+
+| Call site | Naive behaviour | Mechanism |
+|---|---|---|
+| `#betInput` — raw write + `input` | **swallowed** | value tracker |
+| `#slider` — raw write + `input` | **swallowed** | value tracker |
+| `#mineSelect` — raw write, *no event* | **never reaches React** | no event dispatched |
+
+React installs its value tracker on `input`/`textarea` **only**. A `<select>` therefore
+has nothing swallowing its event: a raw write *plus* a `change` event does reach React
+state (pinned by a test so nobody "simplifies" the shim's select branch to match the
+input branch). What actually breaks Mines is that `agent-ui.js:678` dispatches no event
+at all — so the agent's chosen mine count silently stays at the default either way.
+
+The fix is unchanged: route every agent-driven write through `setNativeValue`, and
+prefer uncontrolled fields.
 
 **Chosen strategy — do both, in this order:**
 
