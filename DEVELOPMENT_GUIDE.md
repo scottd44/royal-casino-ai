@@ -1,0 +1,366 @@
+# Royal Casino — Development Guide
+
+Everything you need to build on this app without breaking it. Read **§1 (architecture)** and
+**§5 (the AI Lab DOM contract)** before you touch anything.
+
+---
+
+## 1. Architecture — zero-build, static, vanilla
+
+There is **no framework, no npm, no bundler, no JSX, no routing library, no component system.**
+This is plain HTML + one CSS file + vanilla-JS IIFE modules served as static files.
+
+```
+index.html          the shell: sidebar, top header, #view mount, all <script> tags
+css/styles.css      the ENTIRE stylesheet (one file, token-driven)
+js/core.js          Casino API — wallet, bet/payout, sound, rig, fx, shared UI factories
+js/app.js           router + sidebar + lobby + VIP + Live Support + AI Guide pages
+js/games/*.js       one IIFE module per game (25 of them)
+js/agent/           the AI Lab: harness.js, agent-ui.js, agent-report.js, agent-lab.js
+js/vendor/          vendored UMD libraries (GSAP, CountUp.js, canvas-confetti)
+```
+
+### Running it
+
+```bash
+python3 serve.py          # preferred — also serves /api/sysmon for the System monitor
+# or
+./START-HERE.command
+# or
+python3 -m http.server 8000
+```
+
+Then open `http://localhost:PORT`. **Do not add a server or a build pipeline.**
+
+### The rules this imposes
+
+| Rule | Why |
+|---|---|
+| No React / Vue / Svelte / Framer Motion / anything needing `npm install` | Nothing compiles these — they cannot run here |
+| Libraries must load from a plain `<script>` (UMD) or `<script type="module">` (ESM) | There is no bundler to resolve `import` from `node_modules` |
+| Prefer **vendoring** the single minified file into `js/vendor/` over a CDN link | The app is designed to run locally and offline |
+| No `import` / `export` in app code | Every file is a classic script sharing one global scope |
+| Every asset in `index.html` carries `?v=N` | **Bump it on every release** or browsers serve stale files. Currently **`v=36`** |
+
+### Module pattern
+
+Each game is an IIFE assigned to a `const`, exposing a `render(view)`:
+
+```js
+const DiceGame = (() => {
+  function render(view) {
+    view.innerHTML = `…`;   // inject markup + element IDs
+    // wire listeners against view.querySelector(...)
+  }
+  return { render };
+})();
+```
+
+`js/app.js` holds the `GAMES` array and swaps a game's `render(view)` into `#view`.
+
+> **Gotcha:** `const Casino = …` at the top level of a classic script lives in the *script lexical
+> scope*, **not** on `window`. Other scripts on the page see it fine; `iframe.contentWindow.Casino`
+> is `undefined`. Use `window.<Name>API` if something outside the page must reach in (that is exactly
+> why the games expose `window.HoldemAPI`, `window.MolesAPI`, etc.).
+
+---
+
+## 2. Vendored dependencies
+
+All three are UMD, non-React, and load from a plain `<script>` tag. They are vendored so the app
+works with no network.
+
+| Library | Version | File | Global | Used for |
+|---|---|---|---|---|
+| [GSAP](https://gsap.com/docs/v3/) | 3.12.5 | `js/vendor/gsap.min.js` | `window.gsap` | Route transitions, staggered lobby/card reveals, micro-interactions |
+| [CountUp.js](https://github.com/inorganik/countUp.js) | 2.8.0 | `js/vendor/countUp.umd.js` | `window.countUp.CountUp` | Wallet ticker, AI Lab telemetry counters |
+| [canvas-confetti](https://github.com/catdad/canvas-confetti) | 1.9.3 | `js/vendor/confetti.browser.min.js` | `window.confetti` | Cash-out / jackpot bursts |
+
+They are loaded **before** `core.js` in `index.html`, each with the `?v=` cache-buster.
+
+**Deliberately not used:** Chart.js and tsParticles. The AI Lab P&L chart is a hand-rolled,
+DPI-crisp `<canvas>` renderer (`renderChart()` in `agent-lab.js`) with grid lines, a gold baseline,
+a gradient area fill and a hover crosshair — Chart.js would add ~200 KB and lose the crosshair
+readout for no gain. If you swap it in later, vendor the UMD build the same way and keep the
+`#aiChart` canvas id.
+
+### Adding another library
+
+1. Confirm it is **not** React-based and ships a UMD or ESM browser build.
+2. `curl -o js/vendor/<lib>.min.js <cdn-url>` — vendor it, don't hotlink.
+3. Add `<script src="js/vendor/<lib>.min.js?v=N"></script>` to `index.html` **above** `js/core.js`.
+4. Bump every `?v=` in `index.html`.
+5. Wrap it defensively (see §3) so removing the tag degrades gracefully instead of throwing.
+
+---
+
+## 3. `Casino.fx` — the animation layer
+
+`js/core.js` exposes `Casino.fx`, thin defensive wrappers over the vendored libraries. **Every
+helper is a no-op / instant fallback when its library is missing or the user prefers reduced
+motion.** Use these instead of calling `gsap` / `confetti` / `CountUp` directly.
+
+```js
+Casino.fx.reduced()                        // true if prefers-reduced-motion: reduce
+Casino.fx.countTo(el, from, to, formatFn)  // tick a number (CountUp), or set it instantly
+Casino.fx.burst("cashout" | "big" | "jackpot")   // confetti
+Casino.fx.reveal(nodes, { y, stagger, delay })   // staggered entrance (GSAP)
+Casino.fx.enter(el, { y })                       // fade/slide a container in (route change)
+```
+
+Two things worth knowing:
+
+- **Confetti is already wired to every game.** `Casino.sound.play("bigwin")` and
+  `play("cashout")` fire a throttled burst, so all 25 games celebrate without a single game module
+  being edited. If you add a new game, just play the existing sound names.
+- **`reveal()` and `enter()` arm a watchdog.** An entrance animation hides its targets first, so a
+  tween that never finishes would leave the UI blank. Both helpers `setTimeout` a cleanup that
+  strips the inline styles once the tween should be done — a no-op normally, a safety net if rAF is
+  throttled (backgrounded tab, headless browser) or GSAP is absent. **Keep that pattern if you write
+  your own reveal.**
+
+Motion is globally dialled down by a `@media (prefers-reduced-motion: reduce)` block at the bottom
+of `styles.css`. Respect it — don't animate with `setInterval` to sidestep it.
+
+---
+
+## 4. The design system
+
+Everything is driven from CSS custom properties in `:root` at the top of `css/styles.css`.
+**Re-theming = evolving those tokens.** Restyling a shared component class updates all 25 games at
+once — that is the whole efficiency story of this codebase.
+
+### Tokens
+
+```css
+/* surfaces — midnight charcoal/slate, one step apart each */
+--bg-0 #05070c   --bg-1 #090d14   --bg-2 #0e131d
+--panel #121824  --panel-2 #182031
+--line #232d40   --line-soft #19212f
+
+/* text */
+--text #eaf0fa   --muted #8792a8   --faint #58627a
+
+/* accents — gold is THE brand accent; the rest are semantic only */
+--gold #f0c24f   --gold-2 #ffdc86  --gold-deep #ab7f16
+--green #22e59a  --red #ff4d6d     --blue #4d8cff   --purple #a97bff
+
+/* neon halos — for glow/shadow only, never for text */
+--glow-gold  --glow-green  --glow-purple  --glow-red
+
+/* glassmorphism */
+--glass  --glass-2  --glass-line  --glass-blur  --glass-panel
+
+/* elevation */
+--shadow-1 / -2 / -3   --ring   --radius / -sm / -lg
+
+/* shell metrics */
+--sbw (sidebar width)  --sbw-min  --topbar-h  --ease
+```
+
+### Design principles
+
+1. **Never hard-code a hex** in new CSS. Use a token, or `color-mix(in srgb, var(--accent) 20%, transparent)`
+   for accent-derived tints. Per-card accents come from the `--accent` custom property set inline
+   from the `GAMES` array.
+2. **Glass for anything that floats** — modals, the profile menu, toasts, the sidebar, the AI Lab
+   dock, the agent HUD. The recipe is `background: var(--glass-panel)` +
+   `backdrop-filter: var(--glass-blur)` + `border: 1px solid var(--glass-line)` + `--shadow-3`.
+   Always ship the `-webkit-` prefix alongside `backdrop-filter`.
+3. **Neon is glow, not fill.** Accent colour lives in `box-shadow` / `filter: drop-shadow`, hairlines,
+   and 8–16% tinted backgrounds. Large saturated fills read cheap.
+4. **Numbers use tabular figures.** Any money, multiplier or telemetry value gets
+   `font-variant-numeric: tabular-nums` and slightly negative `letter-spacing`. There is a `.num`
+   utility class for one-offs.
+5. **Type:** Inter everywhere, `font-weight: 800` + `letter-spacing: -0.02em` for headings.
+   Cinzel is reserved for brand identity only — the wordmark, the hero `<h1>`, and the big display
+   numerals inside games (`.crash-mult`, `.dice-roll-num`, `.wheel-hub`, `.cf-mult`).
+6. **Motion:** `--ease` = `cubic-bezier(0.22, 0.8, 0.28, 1)`. Hover lifts are `translateY(-4px…-6px)`
+   over ~0.28s. Never animate `width`/`height`/`top`/`left` — use `transform` and `opacity`.
+
+### Shared component classes
+
+Style these, not individual games:
+
+`.page-head` `.page-title` `.page-sub` · `.panel` · `.game-layout` · `.felt` ·
+`.btn` + `.btn-green` `.btn-blue` `.btn-purple` `.btn-red` `.btn-gold` `.btn-ghost` `.btn-sm` `.btn-block` ·
+`.stat-grid` `.stat` · `.field` `.input` `.bet-row` · `.bet-group` `.bet-input` `.bet-seg` (from `betFieldHTML()`) ·
+`.switch` (slider toggle) · `.multiplier-tag` `.win-banner` `.history` `.pill` `.divider` `.hint` ·
+`.report-overlay` `.report-card` `.howto-body` (modals) · `.toast` · `.game-card` `.cat-chip` (lobby)
+
+---
+
+## 5. 🔒 The AI Lab DOM contract — read this before restyling anything
+
+The agent in `js/agent/agent-ui.js` **never sees game code**. It plays the same UI you do: it reads
+the live DOM through per-game *adapters* and clicks real buttons. Those selectors **are** the API.
+
+### The five hard rules
+
+1. **Never rename, remove, or restructure an element `id`.** Adapters are ~95% id-based.
+2. **Never remove a `data-*` attribute** an adapter reads: `[data-side]` (Baccarat), `[data-risk]`
+   (Keno/Wheel), `[data-rows]` (Plinko), `[data-idx]` (Video Poker hold slots), `[data-bet]`
+   (the ½/2×/Max segment), `[data-nav]` (navigation), `[data-compute]` (GPU/CPU).
+3. **Never rename or delete a `window.*API` object:** `HoldemAPI`, `BattleshipAPI`, `MolesAPI`,
+   `SnakesAPI`, `CoinflipAPI`, `RPSAPI`, `KenoAPI`, `RouletteAPI`.
+4. **A `[data-nav="<gameId>"]` element for every game must exist in the DOM at all times.**
+   `switchToGame()` navigates the agent by `document.querySelector('[data-nav="dice"]').click()`.
+   The sidebar carries these — collapsing it only *visually* narrows the rail; the buttons stay
+   mounted and clickable. Never render the game list conditionally, never unmount it on mobile
+   (it is translated off-canvas, not removed).
+5. **Keep the two-`.panel` game layout.** `agent-lab.js` injects the "🤖 Let AI play" button into
+   `view.querySelectorAll(".panel")[1]` — the controls panel. The lobby hero must keep
+   `.hero-actions` for the same reason.
+
+### Before you restyle a game, do this
+
+```bash
+# find that game's adapter and note every selector it touches
+grep -n "gameId: {" -A 60 js/agent/agent-ui.js
+grep -oE '\$\("#[a-zA-Z0-9_-]+"\)|querySelector\([^)]*\)|window\.[A-Za-z]+API' js/agent/agent-ui.js | sort -u
+```
+
+Every `$("#…")`, `querySelector(...)`, `[data-…]`, `.click()` target and `window.*API` call in that
+game's `detect()` and `play()` must survive. Restyle **classes and wrappers only**.
+
+### Current adapter `detect()` hooks (the minimum that must exist on render)
+
+| Game | Hooks | Game | Hooks |
+|---|---|---|---|
+| slots | `#spinBtn` `#reels` | baccarat | `#bacDeal` `[data-side]` |
+| gems | `#gemSpinBtn` `#gemGrid` | threecard | `#tcpDeal` `#tcpPlayer` |
+| blackjack | `#dealBtn` | casinowar | `#warDeal` `#warP` |
+| videopoker | `#vpCards` `#drawBtn` | reddog | `#rdDeal` `#rdCards` |
+| roulette | `#board` + `RouletteAPI` | battleship | `#bsDeal` `#bsGrid` |
+| dice | `#rollBtn` `#slider` | moles | `#molGrid` + `MolesAPI` |
+| mines | `#startBtn` `#grid` | coinflip | `#cfCoins` + `CoinflipAPI` |
+| crash | `#placeBetBtn` `#crashStage` | rps | `#rpsTrack` + `RPSAPI` |
+| limbo | `#limboBtn` `#targetInput` | snakes | `#snBoard` + `SnakesAPI` |
+| hilo | `#higherBtn` `#hiloCard` | keno | `#knBoard` + `KenoAPI` |
+| tower | `#towerGrid` `#towerStart` | plinko | `#dropBtn` `#plinkoStage` |
+| wheel | `#wheelBtn` `#wheelStage` | holdem | `#hcControls` + `HoldemAPI` |
+| chicken | `#chkCross` **`#chkRoad`** ⚠️ | | |
+
+> ⚠️ **Known pre-existing bug:** the `chicken` adapter's `detect()` requires `#chkRoad`, but
+> `js/games/chicken.js` renders `#chkStage` / `#chkTrack` — there is no `#chkRoad` anywhere in the
+> repo, and there never was. `detect()` therefore always returns `false` and the agent can never
+> play Chicken Road. The one-line fix is in `agent-ui.js`: change `$("#chkRoad")` to `$("#chkStage")`.
+> It is left as-is here because it is agent logic, outside the scope of the visual overhaul.
+
+### The Lab's own contract
+
+`js/agent/agent-lab.js` is presentation and may be restyled — but **every control must keep its id
+and keep writing to the same `RoyalAgent` setting**:
+
+| Element id | Writes to |
+|---|---|
+| `#aggr` | `R.settings.aggression` |
+| `#speed` | `R.settings.delayMs` |
+| `#brainSlider` (+ `#brainStages [data-brain]`) | `R.setBrain(tokens, temp, label)` → `brainTokens` / `brainTemp` / `brain` |
+| `#computeSeg [data-compute]` | `R.setCompute("gpu"\|"cpu")` |
+| `#emotions` | `R.setEmotions(bool)` |
+| `#modelSelect` | `R.setModel(tag)` |
+| `#runN` `#profit` `#loss` `#sessionMin` `#breakEvery` `#breakFor` `#agentic` | the matching `R.settings.*` |
+| `#labRun` `#labReport` `#labNewGame` `#labReset` `#labClear` `#labJSON` `#labCSV` | `R.play/stop`, `R.stopAndReport`, `R.forceNewGame`, `R.resetStats`, `R.clearSessionLog`, `R.exportJSON/CSV` |
+
+Telemetry nodes that `agent-report.js` / `render()` update — `#labStats`, `#labGames`, `#aiChart`,
+`#labLog`, `#labSys`, `#labPnl`, `#aiLabLive` — must keep their ids. **`#aiStatus` is written
+directly by `agent-ui.js`'s `setStatus()`; never remove it or hide it from the DOM.**
+
+The **3-stage Brainpower dial** is a presentation layer over the same continuous `#brainSlider`:
+the stage buttons set the slider to `0` / `50` / `100` and call the same `applyBrain()` the slider
+does. The dial maps `0–100 → 64–768` tokens exponentially with a paired temperature
+(`0.8 → 0.35`); Instinct = 64, Sharp = 224, Deep = 768.
+
+The **Live Agent HUD** (`#agentHud`) is purely additive. It renders existing `RoyalAgent` state
+(`getLog()`, `getStats()`, `settings`) and its Quick Actions call the **same** `toggleRun()` /
+`newGame()` / `openDrawer()` functions the drawer buttons do — one code path, no duplicated logic.
+It adds no decision-making and touches nothing the adapters read.
+
+---
+
+## 6. Building a new game
+
+1. **Create `js/games/<id>.js`** using the IIFE pattern, and add the `<script>` tag to `index.html`.
+2. **Use the shared markup skeleton** so it inherits the theme for free:
+
+```js
+view.innerHTML = `
+  <div class="page-head">
+    <h2 class="page-title">🎲 My Game</h2>
+    <p class="page-sub">One-line explanation of the game.</p>
+    ${Casino.helpBtnHTML("myGameHelp")}
+  </div>
+  <div class="game-layout">
+    <div class="panel"><!-- the board / felt / stage --></div>
+    <div class="panel">
+      ${Casino.betFieldHTML(20)}          <!-- gives you #betInput + [data-bet] -->
+      <div class="stat-grid">…</div>
+      <button class="btn btn-block" id="myGoBtn">PLAY</button>
+    </div>
+  </div>`;
+Casino.wireBet(view, onBetChange);
+```
+
+   The **second `.panel` must be the controls panel** — that is where the AI-play button is injected.
+
+3. **Register it in `js/app.js`** by adding an entry to `GAMES` (`id`, `emoji`, `name`, `desc`,
+   `tag`, `accent`, `provider`, `render`) and putting its `id` in the right `CATEGORIES` group.
+   The sidebar link, the lobby card, and its `[data-nav]` hook are generated from that.
+4. **Use the Casino API** for money — never mutate a balance yourself:
+   `Casino.bet(n)` / `Casino.payout(n)` / `Casino.getBalance()` / `Casino.fmt` / `Casino.money`.
+5. **Honour the rig.** Call `if (Casino.cheat.win()) { …force a favourable outcome… }` at the point
+   the result is decided, so the 😈 toggle works everywhere.
+6. **Play the standard sounds** — `click`, `tick`, `win`, `bigwin`, `cashout`, `lose`. `bigwin` and
+   `cashout` also trigger confetti automatically.
+7. **Bump every `?v=` in `index.html`.**
+
+### Making it AI-playable (optional)
+
+Add an adapter to `js/agent/agent-ui.js` with `detect()`, `play(ctx)`, and a fallback heuristic —
+and then **treat every selector you used there as frozen.** For games whose state is hard to read
+from the DOM, expose a small read-only `window.<Name>API` (as Holdem, Moles, Snakes, Coinflip, RPS,
+Keno and Battleship do) rather than scraping fragile markup.
+
+---
+
+## 7. Release checklist
+
+```bash
+node --check js/core.js js/app.js            # syntax-check anything you edited
+for f in js/*.js js/agent/*.js js/games/*.js; do node --check "$f" || echo "FAIL $f"; done
+```
+
+- [ ] Bump **every** `?v=` in `index.html` (CSS, all game scripts, agent scripts, vendor scripts).
+- [ ] Load the lobby; open at least one game from each of the three categories and play a round.
+- [ ] Toggle 😈 and confirm outcomes swing in the player's favour.
+- [ ] Open the AI Lab → **Start** → confirm it detects the live game, the telemetry counters tick,
+      the P&L chart draws, the move history fills, and the HUD appears.
+- [ ] Change model / brainpower stage / GPU–CPU and confirm they still land in `RoyalAgent.settings`.
+- [ ] **Stop** and **🔀 New game** still work; **Stop & Report** renders the session report.
+- [ ] Collapse the sidebar and confirm `document.querySelector('[data-nav="dice"]')` still resolves.
+- [ ] Check `prefers-reduced-motion` (macOS: System Settings → Accessibility → Display → Reduce motion).
+
+### Headless smoke test — `tools/smoke-test.html`
+
+There is no test runner, but `tools/smoke-test.html` drives a full end-to-end pass: it loads
+`index.html` in a same-origin iframe and asserts against `contentWindow.RoyalAgent` and
+`eval("Casino")`. **52 assertions** covering control wiring, the brainpower stages, routing (both
+`[data-nav]` clicks and the hash fallback), the 😈 rig, a live Ollama run, telemetry, the HUD, and
+agentic free-roam across multiple tables. It is not referenced by `index.html`, so it ships inert.
+
+Open it in a browser at `http://localhost:PORT/tools/smoke-test.html`, or run it headless:
+
+```bash
+python3 -m http.server 8765 &
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless --disable-gpu \
+  --virtual-time-budget=600000 --dump-dom "http://localhost:8765/tools/smoke-test.html" \
+  | grep -oE '(OK|FAIL) .*'
+```
+
+Requires Ollama running with `qwen2.5:7b` for the agent section. Two gotchas when extending it:
+
+- Under Chrome's virtual time, `await sleep(…)` can fast-forward past an entire agent session —
+  assert on synchronous state **immediately** after an action, not after a sleep.
+- Leave `profitTargetPct` / `stopLossPct` at `0` before a run, or an auto-stop will end the
+  session after one round and every downstream assertion will look like a bug.

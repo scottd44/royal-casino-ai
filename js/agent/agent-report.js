@@ -91,7 +91,7 @@
     const y = (v) => h - pad - ((v - min) / (max - min || 1)) * (h - 2 * pad);
 
     // baseline (starting bankroll)
-    ctx.strokeStyle = "rgba(138,150,173,0.4)";
+    ctx.strokeStyle = "rgba(135,146,168,0.4)";
     ctx.setLineDash([4, 4]);
     ctx.beginPath(); ctx.moveTo(pad, y(start)); ctx.lineTo(w - pad, y(start)); ctx.stroke();
     ctx.setLineDash([]);
@@ -99,7 +99,7 @@
     // area fill
     const up = report.net >= 0;
     const grad = ctx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, up ? "rgba(62,207,142,0.28)" : "rgba(239,77,106,0.28)");
+    grad.addColorStop(0, up ? "rgba(34,229,154,0.32)" : "rgba(255,77,109,0.32)");
     grad.addColorStop(1, "rgba(0,0,0,0)");
     ctx.beginPath();
     series.forEach((v, i) => (i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v))));
@@ -109,7 +109,7 @@
     ctx.fillStyle = grad; ctx.fill();
 
     // line
-    ctx.strokeStyle = up ? "#3ecf8e" : "#ef4d6a";
+    ctx.strokeStyle = up ? "#22e59a" : "#ff4d6d";
     ctx.lineWidth = 2;
     ctx.beginPath();
     series.forEach((v, i) => (i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v))));

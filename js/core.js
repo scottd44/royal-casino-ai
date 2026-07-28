@@ -19,16 +19,30 @@ const Casino = (() => {
 
   function getBalance() { return balance; }
 
+  let shownBalance = balance; // what the wallet is currently displaying
+
   function renderBalance(dir) {
     const el = document.getElementById("walletAmount");
     if (!el) return;
-    el.textContent = fmt(balance);
+    // Tick the wallet up/down instead of snapping (CountUp when available).
+    fx.countTo(el, shownBalance, balance, fmt);
+    shownBalance = balance;
+
+    const pm = document.getElementById("pmBalance");
+    if (pm) pm.textContent = fmt(balance);
+
     if (dir) {
+      const chip = document.getElementById("walletChip");
       el.classList.remove("flash-up", "flash-down");
+      if (chip) chip.classList.remove("pulse-up", "pulse-down");
       // force reflow so re-adding the class re-triggers the transition
       void el.offsetWidth;
       el.classList.add(dir > 0 ? "flash-up" : "flash-down");
-      setTimeout(() => el.classList.remove("flash-up", "flash-down"), 550);
+      if (chip) chip.classList.add(dir > 0 ? "pulse-up" : "pulse-down");
+      setTimeout(() => {
+        el.classList.remove("flash-up", "flash-down");
+        if (chip) chip.classList.remove("pulse-up", "pulse-down");
+      }, 650);
     }
   }
 
@@ -212,7 +226,21 @@ const Casino = (() => {
       lose:    () => { tone(220, 0, 0.18, "sawtooth", 0.12); tone(155, 0.13, 0.32, "sawtooth", 0.12); },
     };
 
+    // Confetti rides along with the celebration sounds, so all 25 games get
+    // cash-out / jackpot bursts without a single game module being edited.
+    // Throttled so a rapid streak can't spam the canvas.
+    let lastBurst = 0;
+    function celebrate(name) {
+      const kind = name === "bigwin" ? "big" : name === "cashout" ? "cashout" : null;
+      if (!kind) return;
+      const now = Date.now();
+      if (now - lastBurst < 700) return;
+      lastBurst = now;
+      fx.burst(kind);
+    }
+
     function play(name) {
+      celebrate(name); // fires even when muted — it's a visual, not a sound
       const fn = library[name];
       if (fn) { try { fn(); } catch (e) { /* audio not available — silent */ } }
     }
@@ -250,6 +278,141 @@ const Casino = (() => {
     };
   })();
 
+  /* ---------- FX ----------
+     Thin, defensive wrappers over the vendored libraries in js/vendor/
+     (GSAP, CountUp.js, canvas-confetti). Every helper degrades to a
+     no-op / instant value if its library isn't present, so the app still
+     runs with the vendor <script> tags removed. Honours the OS
+     "reduce motion" setting. See DEVELOPMENT_GUIDE.md. */
+  const fx = (() => {
+    const mq = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+    const reduced = () => !!(mq && mq.matches);
+    const CountUpCtor = () => (window.countUp && window.countUp.CountUp) || null;
+
+    /** Tick `el` from `from` to `to`. `format` renders the number. */
+    function countTo(el, from, to, format = fmt) {
+      if (!el) return;
+      const C = CountUpCtor();
+      const diff = Math.abs(to - from);
+      if (!C || reduced() || diff < 1 || diff > 5_000_000) {
+        el.textContent = format(to);
+        return;
+      }
+      try {
+        const cu = new C(el, to, {
+          startVal: from,
+          duration: Math.min(1.1, 0.28 + Math.log10(diff + 1) * 0.22),
+          useEasing: true,
+          separator: ",",
+          formattingFn: format,
+        });
+        if (cu.error) { el.textContent = format(to); return; }
+        cu.start();
+      } catch { el.textContent = format(to); }
+    }
+
+    /** Confetti burst. kind: "big" | "cashout" | "jackpot". */
+    function burst(kind = "cashout") {
+      if (typeof window.confetti !== "function" || reduced()) return;
+      const gold = ["#f0c24f", "#ffdc86", "#ab7f16"];
+      const neon = ["#22e59a", "#a97bff", "#4d8cff", "#f0c24f"];
+      try {
+        if (kind === "jackpot") {
+          window.confetti({ particleCount: 160, spread: 100, startVelocity: 52, origin: { y: 0.62 }, colors: neon, disableForReducedMotion: true });
+          setTimeout(() => window.confetti({ particleCount: 90, angle: 60, spread: 66, origin: { x: 0, y: 0.7 }, colors: gold, disableForReducedMotion: true }), 130);
+          setTimeout(() => window.confetti({ particleCount: 90, angle: 120, spread: 66, origin: { x: 1, y: 0.7 }, colors: gold, disableForReducedMotion: true }), 200);
+        } else if (kind === "big") {
+          window.confetti({ particleCount: 110, spread: 78, startVelocity: 44, origin: { y: 0.65 }, colors: neon, disableForReducedMotion: true });
+        } else {
+          window.confetti({ particleCount: 46, spread: 58, startVelocity: 34, scalar: 0.85, origin: { y: 0.68 }, colors: gold, disableForReducedMotion: true });
+        }
+      } catch { /* confetti unavailable — cosmetic only */ }
+    }
+
+    /* An entrance animation hides its targets first, so a tween that never
+       finishes would leave the UI blank. Every reveal therefore arms a
+       watchdog that strips the inline styles once the tween should be done —
+       a no-op in the normal case, a safety net if rAF is throttled, the tab
+       is backgrounded mid-tween, or GSAP is missing. */
+    function unhide(list) {
+      list.forEach((n) => { n.style.opacity = ""; n.style.transform = ""; });
+    }
+
+    /** Longest a staggered cascade may take, in seconds. */
+    const MAX_STAGGER_TOTAL = 0.6;
+    /** Grace period after a tween's expected end before we force it visible. */
+    const WATCHDOG_GRACE_MS = 250;
+
+    function armWatchdog(list, expectedSeconds) {
+      setTimeout(() => unhide(list), expectedSeconds * 1000 + WATCHDOG_GRACE_MS);
+    }
+
+    /** Staggered entrance for a NodeList/array. Returns the GSAP tween or null. */
+    function reveal(nodes, opts = {}) {
+      const list = Array.from(nodes || []);
+      if (!list.length) return null;
+      if (!window.gsap || reduced()) { unhide(list); return null; }
+
+      const duration = opts.duration ?? 0.42;
+      const delay = opts.delay ?? 0;
+      // Cap the cascade so a big grid can never keep content hidden for long —
+      // 25 cards at a fixed stagger would run for well over a second.
+      const stagger = Math.min(opts.stagger ?? 0.035, MAX_STAGGER_TOTAL / list.length);
+      const tween = window.gsap.fromTo(list,
+        { opacity: 0, y: opts.y ?? 16, scale: opts.scale ?? 1 },
+        {
+          opacity: 1, y: 0, scale: 1,
+          duration, ease: opts.ease || "power2.out", stagger, delay,
+          clearProps: "opacity,transform",
+          overwrite: true,
+        });
+      armWatchdog(list, delay + duration + stagger * list.length);
+      return tween;
+    }
+
+    /* Hard reset a persistent mount point (e.g. #view).
+       NEVER animate the mount itself — it is never replaced, so a tween that
+       stalls or is interrupted leaves inline opacity/transform on it forever
+       and the whole app renders invisible. Call this before every route render
+       so the container is guaranteed visible no matter what ran before. */
+    function resetMount(el) {
+      if (!el) return;
+      if (window.gsap) {
+        window.gsap.killTweensOf(el);
+        // kill anything still running on the outgoing children too
+        window.gsap.killTweensOf(el.children);
+      }
+      el.style.opacity = "";
+      el.style.transform = "";
+      el.style.translate = "";
+      el.style.rotate = "";
+      el.style.scale = "";
+    }
+
+    /** Route-transition entrance. Animates the container's CHILDREN, never the
+        container — children get replaced on the next render, so a stalled tween
+        is always self-healing. */
+    function enter(el, opts = {}) {
+      if (!el) return null;
+      resetMount(el);
+      const kids = Array.from(el.children);
+      if (!kids.length) return null;
+      if (!window.gsap || reduced()) { unhide(kids); return null; }
+      const duration = opts.duration ?? 0.3;
+      const stagger = Math.min(opts.stagger ?? 0.04, MAX_STAGGER_TOTAL / kids.length);
+      const tween = window.gsap.fromTo(kids,
+        { opacity: 0, y: opts.y ?? 10 },
+        {
+          opacity: 1, y: 0, duration, ease: "power2.out", stagger,
+          clearProps: "opacity,transform", overwrite: true,
+        });
+      armWatchdog(kids, duration + stagger * kids.length);
+      return tween;
+    }
+
+    return { reduced, countTo, burst, reveal, enter, resetMount, hasGsap: () => !!window.gsap };
+  })();
+
   function toast(msg, type = "info", ms = 2600) {
     const wrap = document.getElementById("toastWrap");
     if (!wrap) return;
@@ -265,7 +428,7 @@ const Casino = (() => {
 
   return {
     getBalance, bet, payout, setBalance, addFunds, reset,
-    renderBalance, fmt, money, randInt, pick, el, toast, sound, cheat,
+    renderBalance, fmt, money, randInt, pick, el, toast, sound, cheat, fx,
     betFieldHTML, wireBet, openHowTo, helpBtnHTML,
     STARTING_BALANCE,
   };

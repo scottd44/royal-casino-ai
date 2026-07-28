@@ -984,7 +984,7 @@ const RoyalAgent = (() => {
     },
 
     chicken: {
-      detect: () => !!$("#chkCross") && !!$("#chkRoad"),
+      detect: () => !!$("#chkCross") && !!$("#chkStage"),
       async play(ctx) {
         const CSURV = { easy: 0.91, medium: 0.83, hard: 0.72, daredevil: 0.55 };
         const DIFFS = Object.keys(CSURV);
