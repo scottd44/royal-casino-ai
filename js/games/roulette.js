@@ -62,7 +62,7 @@ const RouletteGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🎡 European Roulette</h2>
+        <h2 class="page-title">${Casino.icon("disc-3", "ico-title")} European Roulette</h2>
         <p class="page-sub">Place as many chips as you like, then spin. Straight up pays 35:1.</p>
         ${Casino.helpBtnHTML("rtHelp")}
       </div>
@@ -116,7 +116,7 @@ const RouletteGame = (() => {
           </div>
 
           <div class="rt-controls">
-            <button class="btn btn-ghost btn-sm" id="undoBtn">↶ Undo</button>
+            <button class="btn btn-ghost btn-sm" id="undoBtn">${Casino.icon("undo-2")} Undo</button>
             <button class="btn btn-ghost btn-sm" id="clearBtn">Clear</button>
             <button class="btn btn-ghost btn-sm" id="rebetBtn">Rebet</button>
             <div class="rt-total">Staked: <b id="totalStaked">0</b></div>

@@ -707,12 +707,15 @@ body.sb-collapsed .brand { flex: 0 0 auto; }
   box-shadow: var(--shadow-2), inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 .hero::after {
-  content: "♠";
+  /* inline SVG, not a ♠ text glyph — that renders as a colour emoji on some
+     platforms and ignores the palette entirely */
+  content: "";
   position: absolute;
-  right: 40px; bottom: -60px;
-  font-size: 250px;
-  color: rgba(240, 194, 79, 0.055);
-  font-family: "Cinzel", serif;
+  right: 26px; bottom: -54px;
+  width: 250px; height: 250px;
+  opacity: 0.055;
+  background: no-repeat center / contain
+    url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f0c24f'%3E%3Cpath d='M12 2C9 6 4 8.5 4 13a4.5 4.5 0 0 0 7.2 3.6L10 22h4l-1.2-5.4A4.5 4.5 0 0 0 20 13c0-4.5-5-7-8-11z'/%3E%3C/svg%3E");
   pointer-events: none;
 }
 /* slow drifting sheen */
@@ -1134,7 +1137,16 @@ body.sb-collapsed .brand { flex: 0 0 auto; }
 .hc-cards { display: flex; gap: 4px; justify-content: center; min-height: 46px; }
 .hc-stack { font-size: 13px; font-weight: 800; color: var(--gold-2); margin-top: 5px; font-variant-numeric: tabular-nums; }
 .hc-bet { font-size: 11px; color: var(--text); margin-top: 3px; }
-.hc-bet::before { content: "🪙 "; }
+.hc-bet::before {
+  content: "";
+  display: inline-block;
+  width: 9px; height: 9px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, var(--gold-2), var(--gold-deep));
+  box-shadow: 0 0 6px rgba(240, 194, 79, 0.55);
+  vertical-align: 0;
+}
 .hc-last { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-top: 2px; }
 .hc-sitout { font-size: 10px; color: var(--faint); padding: 14px 0; }
 .hc-center { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; justify-content: center; }
@@ -1246,10 +1258,16 @@ body.sb-collapsed .brand { flex: 0 0 auto; }
 
 .chk-lane.chk-next { background: linear-gradient(180deg, rgba(255, 220, 134, 0.22), rgba(255, 220, 134, 0.05)); box-shadow: inset 0 0 0 2px rgba(255, 220, 134, 0.7); cursor: pointer; }
 .chk-lane.chk-next::after {
-  content: "▲"; position: absolute; bottom: 10px; left: 0; right: 0; text-align: center;
-  color: var(--gold-2); font-size: 15px; z-index: 4; animation: chkArrow 0.9s ease-in-out infinite;
+  content: ""; position: absolute; bottom: 12px; left: 50%; margin-left: -6px;
+  width: 12px; height: 12px; z-index: 4;
+  border-left: 2.5px solid var(--gold-2); border-top: 2.5px solid var(--gold-2);
+  border-radius: 2px; transform: rotate(45deg);
+  animation: chkArrow 0.9s ease-in-out infinite;
 }
-@keyframes chkArrow { 0%,100% { transform: translateY(0); opacity: 0.65; } 50% { transform: translateY(-5px); opacity: 1; } }
+@keyframes chkArrow {
+  0%, 100% { transform: rotate(45deg) translate(0, 0); opacity: 0.65; }
+  50% { transform: rotate(45deg) translate(4px, -4px); opacity: 1; }
+}
 .chk-lane.cleared { background: linear-gradient(180deg, rgba(34, 229, 154, 0.2), rgba(34, 229, 154, 0.05)); }
 .chk-lane.cleared .chk-car { animation: none; opacity: 0.12; }
 .chk-lane.crash { background: linear-gradient(180deg, rgba(255, 77, 109, 0.55), rgba(255, 77, 109, 0.12)); }
@@ -2079,9 +2097,10 @@ body { padding-bottom: 52px; transition: padding-bottom 0.28s ease; } /* JS keep
 .lab-seg2 button:disabled { opacity: 0.4; cursor: not-allowed; }
 .lab-seg2.locked { position: relative; }
 .lab-seg2.locked::after {
-  content: "🔒";
-  position: absolute; right: -2px; top: -12px;
-  font-size: 9px; opacity: 0.7;
+  content: "locked";
+  position: absolute; right: 0; top: -13px;
+  font-size: 8.5px; font-weight: 800; letter-spacing: 0.8px;
+  text-transform: uppercase; color: var(--faint);
 }
 .lab-info {
   border: 0; background: transparent; color: var(--faint);
@@ -2158,10 +2177,12 @@ input.lab-input { font-variant-numeric: tabular-nums; }
   cursor: pointer;
 }
 .lab-select::after {
-  content: "▾";
-  position: absolute; right: 10px; top: 50%;
-  transform: translateY(-50%);
-  font-size: 10px; color: var(--muted);
+  content: "";
+  position: absolute; right: 12px; top: 50%;
+  width: 7px; height: 7px; margin-top: -5px;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  border-radius: 1px;
+  transform: rotate(45deg);
   pointer-events: none;
 }
 .lab-select:hover select { border-color: var(--gold-deep); }
@@ -3089,3 +3110,92 @@ input[type="range"] { accent-color: var(--gold); }
 
 /* Checkboxes in game panels (beginner mode, hold toggles) */
 input[type="checkbox"] { accent-color: var(--gold); }
+
+/* ============================================================
+   ICONS — Lucide stroke SVGs
+   ------------------------------------------------------------
+   No emoji in the chrome. Emoji are OS-supplied bitmaps: they
+   ignore `color`, ignore stroke weight, and look different on
+   every machine. Lucide icons inherit `currentColor`, so an icon
+   is just text as far as the design system is concerned.
+   `<i class="ico">` is swapped for `<svg class="ico lucide">`.
+   ============================================================ */
+.ico {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  flex: 0 0 auto;
+  vertical-align: -0.14em;
+  stroke-width: 2;
+  color: inherit;
+}
+svg.ico { overflow: visible; }
+
+/* Anything that pairs an icon with a label lines them up on the text baseline */
+.btn, .cat-chip, .pm-item, .sb-item, .hero-stat, .hero-badge,
+.brain-stage, .lab-seg2 button, .lab-switch span, .hud-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.btn { justify-content: center; }
+.btn-block { display: flex; width: 100%; }
+.lobby-head h2, .page-title, .report-title, .swing-k, .ai-lab-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.page-title, .report-title { display: inline-flex; }
+
+/* Per-context sizing */
+.brand-mark .ico { width: 22px; height: 22px; stroke-width: 2.2; }
+.sb-ico .ico { width: 17px; height: 17px; }
+.sb-label .ico { width: 12px; height: 12px; stroke-width: 2.4; }
+.sb-collapse .ico, .avatar-caret .ico { width: 13px; height: 13px; }
+.icon-btn .ico { width: 17px; height: 17px; }
+.avatar .ico { width: 14px; height: 14px; stroke-width: 2.4; }
+.avatar-lg .ico { width: 19px; height: 19px; }
+.pm-item .ico { width: 16px; height: 16px; color: var(--muted); }
+.pm-item:hover .ico, .pm-item.on .ico { color: inherit; }
+.wallet-icon .ico { width: 15px; height: 15px; color: var(--gold-2); }
+.ico-title { width: 26px; height: 26px; stroke-width: 2; color: var(--gold); }
+.hero-badge .ico, .hero-stat .ico { width: 14px; height: 14px; color: var(--gold-2); }
+.cat-chip .ico { width: 15px; height: 15px; }
+.lobby-head h2 .ico { width: 17px; height: 17px; color: var(--gold); }
+.btn .ico { width: 15px; height: 15px; }
+.btn-sm .ico { width: 13px; height: 13px; }
+.play-tag .ico { width: 13px; height: 13px; }
+.swing-k .ico { width: 14px; height: 14px; }
+.chat-av .ico { width: 15px; height: 15px; color: var(--muted); }
+
+/* Lobby card + sidebar tint with the game's accent colour */
+.game-emoji .ico { width: 26px; height: 26px; color: var(--accent, var(--gold)); stroke-width: 1.9; }
+.sb-item .sb-ico .ico { color: currentColor; }
+.sb-item.active .sb-ico .ico { color: var(--accent, var(--gold)); }
+.sb-item:hover .sb-ico .ico { color: var(--accent, var(--gold)); }
+
+/* VIP */
+.vip-crest .ico { width: 38px; height: 38px; stroke-width: 1.6; }
+.vt-ico .ico { width: 24px; height: 24px; color: var(--c, var(--gold)); stroke-width: 1.8; }
+
+/* AI Lab */
+.ai-lab-title .ico { width: 15px; height: 15px; color: var(--gold); }
+.ai-lab-caret .ico { width: 13px; height: 13px; }
+.brain-stage .ico { width: 13px; height: 13px; }
+.brain-stage { flex-direction: column; gap: 2px; }
+.brain-stage.on .ico { color: var(--gold-2); }
+.lab-seg2 button .ico { width: 14px; height: 14px; }
+.lab-switch span .ico { width: 14px; height: 14px; color: var(--red); }
+.lab-info .ico, .lab-mini .ico { width: 13px; height: 13px; }
+.lab-info, .lab-mini { display: inline-flex; align-items: center; vertical-align: -0.15em; }
+.tilt-face .ico { width: 15px; height: 15px; }
+.tilt-meter.off .tilt-face .ico { color: var(--blue); }
+.hud-x .ico { width: 14px; height: 14px; }
+.hud-actions .btn .ico { width: 13px; height: 13px; }
+.lab-log-row .ico { width: 12px; height: 12px; vertical-align: -0.1em; margin-right: 3px; }
+
+/* Tilt colour follows the state */
+#labTiltFace .ico, #hudTiltFace .ico { color: var(--green); transition: color 0.3s; }
+.tilt-bar.hot ~ * #labTiltFace .ico { color: var(--red); }
+
+/* Reduced-motion users still get the icons, just no transitions (handled above) */

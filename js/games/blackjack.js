@@ -98,7 +98,7 @@ const BlackjackGame = (() => {
   function render(view) {
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🃏 Blackjack</h2>
+        <h2 class="page-title">${Casino.icon("spade", "ico-title")} Blackjack</h2>
         <p class="page-sub">Beat the dealer without going over 21. Blackjack pays 3:2. Dealer stands on 17.</p>
         ${Casino.helpBtnHTML("bjHelp")}
       </div>
@@ -120,7 +120,7 @@ const BlackjackGame = (() => {
         <div class="panel">
           ${Casino.betFieldHTML(25)}
           <button class="btn btn-block btn-green" id="dealBtn" style="font-size:16px;padding:14px;">Deal</button>
-          <label class="bj-beginner"><input type="checkbox" id="bjBeginner"> 🔰 Beginner mode — show the strategy hint</label>
+          <label class="bj-beginner"><input type="checkbox" id="bjBeginner"> Beginner mode — show the strategy hint</label>
           <div class="divider"></div>
           <div class="bj-hint" id="bjHint" style="display:none"></div>
           <div class="bj-actions">
@@ -155,7 +155,7 @@ const BlackjackGame = (() => {
       </ul>
       <h4>Payouts &amp; dealer rules</h4>
       <p>A win pays <b>1:1</b>; a natural <b>Blackjack</b> (Ace + 10-value on the first two cards) pays <b>3:2</b>. The dealer must <b>hit until 17</b> and then stand. Tie = push (bet returned).</p>
-      <p>New to it? Flip on <b>🔰 Beginner mode</b> for a live basic-strategy hint each turn.</p>`));
+      <p>New to it? Flip on <b>Beginner mode</b> for a live basic-strategy hint each turn.</p>`));
 
     // Beginner mode preference persists.
     const BEG_KEY = "royal_casino_bj_beginner";
@@ -176,7 +176,7 @@ const BlackjackGame = (() => {
       const canDouble = player.length === 2 && Casino.getBalance() >= bet;
       const rec = basicStrategy(player, dealer[0], canDouble);
       hintEl.style.display = "";
-      hintEl.innerHTML = `🔰 Basic strategy says <b>${ACTION_LABEL[rec]}</b>`;
+      hintEl.innerHTML = `Basic strategy says <b>${ACTION_LABEL[rec]}</b>`;
       const btn = { hit: hitBtn, stand: standBtn, double: doubleBtn }[rec];
       if (btn && !btn.disabled) btn.classList.add("bj-suggest");
     }
@@ -206,7 +206,7 @@ const BlackjackGame = (() => {
       if (type === "lose" && Casino.cheat.win()) {
         type = "push";
         winAmount = bet;
-        message = "🍀 Lucky break — your stake is refunded.";
+        message = "Lucky break — your stake is refunded.";
         Casino.sound.play("cashout");
       }
       inRound = false;

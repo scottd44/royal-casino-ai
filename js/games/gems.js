@@ -36,7 +36,7 @@ const GemsGame = (() => {
   function render(view) {
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">💎 Cosmic Gems</h2>
+        <h2 class="page-title">${Casino.icon("gem", "ico-title")} Cosmic Gems</h2>
         <p class="page-sub">A 3×3 gem slot with 5 paylines — three rows and both diagonals. Match three gems on any line; several lines can hit at once.</p>
         ${Casino.helpBtnHTML("gemsHelp")}
       </div>
@@ -58,7 +58,7 @@ const GemsGame = (() => {
         <div class="panel">
           <p class="controls-title">Place your bet</p>
           ${Casino.betFieldHTML(20)}
-          <button class="btn btn-block btn-purple" id="gemSpinBtn" style="font-size:17px;padding:15px;">SPIN 💎</button>
+          <button class="btn btn-block btn-purple" id="gemSpinBtn" style="font-size:17px;padding:15px;">SPIN</button>
           <div class="stat-grid" style="margin-top:16px;">
             <div class="stat"><div class="k">Lines hit</div><div class="v" id="linesHit">—</div></div>
             <div class="stat"><div class="k">Last win</div><div class="v" id="lastWin">—</div></div>
@@ -155,7 +155,7 @@ const GemsGame = (() => {
         r.winCells.forEach((i) => cells[i].classList.add("win"));
         const big = r.win >= betAmount * 15;
         Casino.sound.play(big ? "bigwin" : "win");
-        banner.textContent = `${r.hit.length} line${r.hit.length > 1 ? "s" : ""} · +${Casino.fmt(r.win)} 🎉`;
+        banner.textContent = `${r.hit.length} line${r.hit.length > 1 ? "s" : ""} · +${Casino.fmt(r.win)}`;
         Casino.toast(`${r.hit.length} line win — +${Casino.fmt(r.win)}!`, "win");
         view.querySelector("#lastWin").textContent = "+" + Casino.fmt(r.win);
         if (r.win > bestWin) { bestWin = r.win; view.querySelector("#bestWin").textContent = Casino.fmt(bestWin); }

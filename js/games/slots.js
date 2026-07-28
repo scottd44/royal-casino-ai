@@ -41,7 +41,7 @@ const SlotsGame = (() => {
   function render(view) {
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🎰 Lucky Sevens Slots</h2>
+        <h2 class="page-title">${Casino.icon("cherry", "ico-title")} Lucky Sevens Slots</h2>
         <p class="page-sub">Match symbols across the payline. Three-of-a-kind pays big.</p>
         ${Casino.helpBtnHTML("slotsHelp")}
       </div>
@@ -71,7 +71,7 @@ const SlotsGame = (() => {
 
         <div class="panel">
           ${Casino.betFieldHTML(20)}
-          <button class="btn btn-block" id="spinBtn" style="font-size:17px;padding:15px;">SPIN 🎰</button>
+          <button class="btn btn-block" id="spinBtn" style="font-size:17px;padding:15px;">SPIN</button>
           <div class="stat-grid" style="margin-top:16px;">
             <div class="stat"><div class="k">Last win</div><div class="v" id="lastWin">—</div></div>
             <div class="stat"><div class="k">Best win</div><div class="v" id="bestWin">0</div></div>
@@ -154,7 +154,7 @@ const SlotsGame = (() => {
       if (result.win > 0) {
         Casino.payout(result.win);
         Casino.sound.play(result.mult >= 18 ? "bigwin" : "win");
-        winBanner.textContent = `${result.label}  +${Casino.fmt(result.win)} 🎉`;
+        winBanner.textContent = `${result.label}  +${Casino.fmt(result.win)}`;
         Casino.toast(`${result.label} — won ${Casino.money(result.win)}!`, "win");
         view.querySelector("#lastWin").textContent = "+" + Casino.fmt(result.win);
         if (result.win > bestWin) { bestWin = result.win; view.querySelector("#bestWin").textContent = Casino.fmt(bestWin); }

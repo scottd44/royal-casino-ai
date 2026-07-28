@@ -14,18 +14,28 @@
   const money = (n) => Casino.money(n);
   const fx = Casino.fx;
 
+  /* agent-ui.js expresses tilt as an emoji in its stats. We never change that
+     (it is agent state), we just translate it for display. */
+  const TILT_ICON = {
+    "\u{1F60E}": "snowflake",   // ice cold
+    "\u{1F642}": "smile",       // steady
+    "\u{1F624}": "flame",       // tilted
+    "\u{1F92C}": "triangle-alert", // full tilt
+    "\u{1F9CA}": "snowflake",   // emotions off
+  };
+
   /* Tilt/emotions meter. Rendered in two places (control deck + HUD) with
      an id prefix so both can be updated from the same state. */
   function tiltMeterHTML(p) {
     return `
       <div class="tilt-meter" id="${p}Tilt">
         <div class="tilt-head">
-          <span class="tilt-face" id="${p}TiltFace">😎</span>
+          <span class="tilt-face" id="${p}TiltFace">${Casino.icon("snowflake")}</span>
           <span class="tilt-name" id="${p}TiltName">Ice cold</span>
           <span class="tilt-num" id="${p}TiltNum">0</span>
         </div>
         <div class="tilt-bar" id="${p}TiltBar"><i id="${p}TiltFill"></i></div>
-        <div class="tilt-scale"><span>😎 Ice</span><span>🙂 Steady</span><span>😤 Tilted</span><span>🤬 Full</span></div>
+        <div class="tilt-scale"><span>Ice</span><span>Steady</span><span>Tilted</span><span>Full</span></div>
       </div>`;
   }
 
@@ -45,7 +55,7 @@
     { k: "latency",  label: "Avg latency", num: true,  get: (s) => s.avgLatency || 0,         f: (v) => (v ? Math.round(v) + "ms" : "—") },
     { k: "tool",     label: "Tool reliab.",num: true,  get: (s) => (s.decisions ? 100 - s.fallbackRate * 100 : -1),
       f: (v) => (v < 0 ? "—" : v.toFixed(0) + "%") },
-    { k: "tilt",     label: "Tilt",        num: false, get: (s) => `${s.tiltEmoji} ${s.tiltShort}`,
+    { k: "tilt",     label: "Tilt",        num: false, get: (s) => s.tiltShort,
       cls: (s) => (s.tilt >= 45 ? "neg" : "") },
     { k: "borrowed", label: "Borrowed",    num: true,  get: (s) => s.borrowed,                f: (v) => money(v),
       cls: () => "neg", hide: (s) => !(s.borrowed > 0) },
@@ -58,59 +68,59 @@
   lab.innerHTML = `
     <div class="ai-lab-resizer" id="aiLabResizer" title="Drag to resize"></div>
     <div class="ai-lab-handle" id="aiLabHandle">
-      <span class="ai-lab-title">🤖 AI Lab</span>
+      <span class="ai-lab-title">${Casino.icon("bot")} AI Lab</span>
       <span class="ai-lab-badge" id="aiLabLive">idle</span>
       <span class="ai-lab-pnl" id="labPnl">±$0</span>
       <span class="ai-lab-live" id="aiStatus">ready</span>
-      <span class="ai-lab-caret" id="aiLabCaret">▲</span>
+      <span class="ai-lab-caret" id="aiLabCaret">${Casino.icon("chevron-up")}</span>
     </div>
     <div class="ai-lab-body">
       <div class="ai-lab-col">
         <div class="lab-sec">Behavior</div>
         <div class="lab-row">
           <label>Aggression <b id="aggrVal">15%</b> <span class="lab-hint" id="aggrLabel">cautious</span>
-            <button class="lab-info" type="button" data-tip="Sets the bet-size hint the AI is fed each round (aggression × current bankroll). Higher = it's nudged to wager a bigger slice of its stack. It's guidance, not a hard rule — a tilted degenerate can still defy it.">ⓘ</button>
+            <button class="lab-info" type="button" data-tip="Sets the bet-size hint the AI is fed each round (aggression × current bankroll). Higher = it's nudged to wager a bigger slice of its stack. It's guidance, not a hard rule — a tilted degenerate can still defy it.">${Casino.icon("info")}</button>
           </label>
           <input type="range" id="aggr" min="0" max="100" value="15" class="lab-slider">
         </div>
         <div class="lab-row">
           <label>Move speed <b id="speedVal">700ms delay</b>
-            <button class="lab-info" type="button" data-tip="Pure pacing — the pause between the AI's moves so you can watch. It does NOT change how the model thinks or plays; it only slows down or speeds up the action on screen.">ⓘ</button>
+            <button class="lab-info" type="button" data-tip="Pure pacing — the pause between the AI's moves so you can watch. It does NOT change how the model thinks or plays; it only slows down or speeds up the action on screen.">${Casino.icon("info")}</button>
           </label>
           <input type="range" id="speed" min="0" max="1500" step="50" value="700" class="lab-slider">
         </div>
         <div class="lab-row brain-dial">
-          <label>Brainpower <b id="brainVal">🃏 Sharp · 224 tokens</b>
-            <button class="lab-info" type="button" data-tip="How much the model may think per decision. Left = fewer tokens + hotter sampling → fast, cheap gut calls (may occasionally misfire, the fallback covers it). Right = more tokens + cooler sampling → slower, more deliberate, better reasoning. Same model throughout — you're changing how hard it thinks, not swapping brains.">ⓘ</button>
+          <label>Brainpower <b id="brainVal">Sharp · 224 tokens</b>
+            <button class="lab-info" type="button" data-tip="How much the model may think per decision. Left = fewer tokens + hotter sampling → fast, cheap gut calls (may occasionally misfire, the fallback covers it). Right = more tokens + cooler sampling → slower, more deliberate, better reasoning. Same model throughout — you're changing how hard it thinks, not swapping brains.">${Casino.icon("info")}</button>
           </label>
           <div class="brain-track"><i></i><i></i><i></i></div>
           <input type="range" id="brainSlider" min="0" max="100" value="50" class="lab-slider">
           <div class="brain-stages" id="brainStages">
-            <button type="button" class="brain-stage" data-brain="0">🦎 Instinct<small>64 tok</small></button>
-            <button type="button" class="brain-stage on" data-brain="50">🃏 Sharp<small>224 tok</small></button>
-            <button type="button" class="brain-stage" data-brain="100">🧠 Deep<small>768 tok</small></button>
+            <button type="button" class="brain-stage" data-brain="0">${Casino.icon("rabbit")} Instinct<small>64 tok</small></button>
+            <button type="button" class="brain-stage on" data-brain="50">${Casino.icon("gauge")} Sharp<small>224 tok</small></button>
+            <button type="button" class="brain-stage" data-brain="100">${Casino.icon("brain")} Deep<small>768 tok</small></button>
           </div>
         </div>
         <div class="lab-row">
           <label>Compute
-            <button class="lab-info" type="button" data-tip="Where inference runs. On Apple Silicon the model uses the GPU (Metal) by default — much faster and cooler; keep it here normally. CPU forces processor-only inference: slower and hotter, but you can watch the CPU cores light up in the System monitor above. Locked while the AI is running — change it, then Start (or restart) to apply.">ⓘ</button>
+            <button class="lab-info" type="button" data-tip="Where inference runs. On Apple Silicon the model uses the GPU (Metal) by default — much faster and cooler; keep it here normally. CPU forces processor-only inference: slower and hotter, but you can watch the CPU cores light up in the System monitor above. Locked while the AI is running — change it, then Start (or restart) to apply.">${Casino.icon("info")}</button>
           </label>
           <div class="lab-seg2" id="computeSeg">
-            <button type="button" data-compute="gpu" class="on">⚡ GPU <small>(Metal)</small></button>
-            <button type="button" data-compute="cpu">🧮 CPU</button>
+            <button type="button" data-compute="gpu" class="on">${Casino.icon("zap")} GPU <small>(Metal)</small></button>
+            <button type="button" data-compute="cpu">${Casino.icon("cpu")} CPU</button>
           </div>
         </div>
         <div class="lab-row">
           <label class="lab-switch" style="margin:0;">
-            <input type="checkbox" id="emotions" checked><span>😤 Emotions (tilt)</span>
-            <button class="lab-info" type="button" data-tip="ON: losses build 'tilt' and wins cool it, and that emotion drives how hard it presses and chases — the full degenerate. OFF: cold-blooded, steady bet-sizing with no tilt swings. Either way it still talks plenty of trash in its reasoning.">ⓘ</button>
+            <input type="checkbox" id="emotions" checked><span>${Casino.icon("flame")} Emotions (tilt)</span>
+            <button class="lab-info" type="button" data-tip="ON: losses build 'tilt' and wins cool it, and that emotion drives how hard it presses and chases — the full degenerate. OFF: cold-blooded, steady bet-sizing with no tilt swings. Either way it still talks plenty of trash in its reasoning.">${Casino.icon("info")}</button>
           </label>
           ${tiltMeterHTML("lab")}
         </div>
         <div class="lab-row-2">
           <div><label>Model
-            <button class="lab-info" type="button" data-tip="The Ollama model that makes the decisions. This list is your locally-installed models (auto-detected). qwen2.5:7b is recommended — it's reliable at the structured tool-calls this app needs. Bigger models reason better but use more tokens and run slower; smaller ones are faster but rougher.">ⓘ</button>
-            <button class="lab-mini" type="button" id="modelRefresh" title="Re-scan installed Ollama models">⟳</button>
+            <button class="lab-info" type="button" data-tip="The Ollama model that makes the decisions. This list is your locally-installed models (auto-detected). qwen2.5:7b is recommended — it's reliable at the structured tool-calls this app needs. Bigger models reason better but use more tokens and run slower; smaller ones are faster but rougher.">${Casino.icon("info")}</button>
+            <button class="lab-mini" type="button" id="modelRefresh" title="Re-scan installed Ollama models">${Casino.icon("refresh-cw")}</button>
           </label>
           <span class="lab-select"><select class="lab-input" id="modelSelect"></select></span></div>
           <div><label>Run N (0=∞)</label><input class="lab-input" type="number" id="runN" min="0" value="0"></div>
@@ -132,14 +142,14 @@
         </div>
         <div class="lab-sec">Controls</div>
         <div class="lab-btns">
-          <button class="btn ai-btn" id="labRun">🤖 Start</button>
-          <button class="btn btn-red btn-sm" id="labReport">⏹ Stop &amp; Report</button>
-          <button class="btn btn-ghost btn-sm" id="labNewGame" title="Make the roaming AI switch to a different game (Agentic mode)">🔀 New game</button>
+          <button class="btn ai-btn" id="labRun">${Casino.icon("play")} Start</button>
+          <button class="btn btn-red btn-sm" id="labReport">${Casino.icon("square")} Stop &amp; Report</button>
+          <button class="btn btn-ghost btn-sm" id="labNewGame" title="Make the roaming AI switch to a different game (Agentic mode)">${Casino.icon("shuffle")} New game</button>
           <button class="btn btn-ghost btn-sm" id="labReset">Reset</button>
           <button class="btn btn-ghost btn-sm" id="labClear">Clear log</button>
           <button class="btn btn-ghost btn-sm" id="labJSON">JSON</button>
           <button class="btn btn-ghost btn-sm" id="labCSV">CSV</button>
-          <button class="btn btn-ghost btn-sm" data-nav="aiguide" title="Full documentation of how the AI works">📖 Guide</button>
+          <button class="btn btn-ghost btn-sm" data-nav="aiguide" title="Full documentation of how the AI works">${Casino.icon("book-open")} Guide</button>
         </div>
       </div>
       <div class="ai-lab-col">
@@ -171,7 +181,7 @@
   $("aiLabHandle").addEventListener("click", (e) => {
     if (e.target.closest("button")) return;
     lab.classList.toggle("collapsed");
-    $("aiLabCaret").textContent = lab.classList.contains("collapsed") ? "▲" : "▼";
+    $("aiLabCaret").innerHTML = Casino.icon(lab.classList.contains("collapsed") ? "chevron-up" : "chevron-down");
     updateBodyPadding();
   });
   window.addEventListener("resize", updateBodyPadding);
@@ -264,7 +274,7 @@
   function brainFromDial(v) {
     const tokens = Math.round(64 * Math.pow(12, v / 100));
     const temp = +(0.8 - 0.45 * (v / 100)).toFixed(2);
-    const zone = v < 33 ? "🦎 Instinct" : v < 67 ? "🃏 Sharp" : "🧠 Deep";
+    const zone = v < 33 ? "Instinct" : v < 67 ? "Sharp" : "Deep";
     return { tokens, temp, zone };
   }
   /* One source of truth for the dial: the range input still drives
@@ -277,7 +287,7 @@
       const stage = v < 33 ? 0 : v < 67 ? 50 : 100;
       btn.classList.toggle("on", Number(btn.dataset.brain) === stage);
     });
-    R.setBrain(b.tokens, b.temp, b.zone.replace(/^\S+\s/, ""));
+    R.setBrain(b.tokens, b.temp, b.zone);
   }
   $("brainSlider").addEventListener("input", (e) => applyBrain(Number(e.target.value)));
   $("brainStages").addEventListener("click", (e) => {
@@ -345,7 +355,7 @@
     dragging = true;
     resizer.setPointerCapture(e.pointerId);
     lab.classList.remove("collapsed");
-    $("aiLabCaret").textContent = "▼";
+    $("aiLabCaret").innerHTML = Casino.icon("chevron-down");
     document.body.style.userSelect = "none";
   });
   window.addEventListener("pointermove", (e) => {
@@ -365,13 +375,13 @@
 
   function openDrawer() {
     lab.classList.remove("collapsed");
-    $("aiLabCaret").textContent = "▼";
+    $("aiLabCaret").innerHTML = Casino.icon("chevron-down");
     updateBodyPadding();
     refreshModels(); // re-scan in case Ollama started after page load
   }
   function toggleDrawer() {
     if (lab.classList.contains("collapsed")) openDrawer();
-    else { lab.classList.add("collapsed"); $("aiLabCaret").textContent = "▲"; updateBodyPadding(); }
+    else { lab.classList.add("collapsed"); $("aiLabCaret").innerHTML = Casino.icon("chevron-up"); updateBodyPadding(); }
   }
   // Let the sidebar (app.js) open the Lab without knowing anything about it.
   window.RoyalLab = { open: openDrawer, toggle: toggleDrawer, showHud: () => { hudDismissed = false; renderHud(); } };
@@ -392,7 +402,7 @@
       <span class="hud-orb"></span>
       <span class="hud-title">AI is playing</span>
       <span class="hud-game" id="hudGame">—</span>
-      <button class="hud-x" id="hudHide" title="Hide the HUD for this run">✕</button>
+      <button class="hud-x" id="hudHide" title="Hide the HUD for this run">${Casino.icon("x")}</button>
     </div>
     <div class="hud-think">
       <div class="hud-think-k"><i></i> AI thinking</div>
@@ -405,9 +415,9 @@
     </div>
     <div class="hud-tilt">${tiltMeterHTML("hud")}</div>
     <div class="hud-actions">
-      <button class="btn ai-btn btn-sm" id="hudRun">⏹ Stop</button>
-      <button class="btn btn-ghost btn-sm" id="hudNew" title="Roam to a different table">🔀 New</button>
-      <button class="btn btn-ghost btn-sm" id="hudDeck" title="Open the control deck">⚙ Deck</button>
+      <button class="btn ai-btn btn-sm" id="hudRun">${Casino.icon("square")} Stop</button>
+      <button class="btn btn-ghost btn-sm" id="hudNew" title="Roam to a different table">${Casino.icon("shuffle")} New</button>
+      <button class="btn btn-ghost btn-sm" id="hudDeck" title="Open the control deck">${Casino.icon("settings-2")} Deck</button>
     </div>`;
   document.body.appendChild(hud);
 
@@ -468,7 +478,7 @@
     net.className = s.net > 0 ? "pos" : s.net < 0 ? "neg" : "";
 
     const runBtn = $("hudRun");
-    runBtn.textContent = running ? "⏹ Stop" : "🤖 Start";
+    runBtn.innerHTML = Casino.icon(running ? "square" : "play") + (running ? " Stop" : " Start");
     runBtn.classList.toggle("ai-running", running);
     $("hudNew").disabled = !(running && R.settings.agentic);
   }
@@ -533,7 +543,7 @@
       : "";
   }
 
-  /* Animated tilt/emotions bar — 😎 Ice Cold → 🙂 Steady → 😤 Tilted → 🤬 Full Tilt.
+  /* Animated tilt/emotions bar — Ice Cold -> Steady -> Tilted -> Full Tilt.
      Reads the same tilt value the agent feeds into every prompt. */
   function renderTilt(p, s) {
     const wrap = $(p + "Tilt");
@@ -541,7 +551,9 @@
     const on = R.settings.emotions !== false;
     const t = Math.max(0, Math.min(100, Number(s.tilt) || 0));
     wrap.classList.toggle("off", !on);
-    $(p + "TiltFace").textContent = on ? (s.tiltEmoji || "😎") : "🧊";
+    // agent-ui reports tilt as an emoji; map it to an icon here so the
+    // agent's own state stays untouched but the chrome stays emoji-free.
+    $(p + "TiltFace").innerHTML = Casino.icon(on ? TILT_ICON[s.tiltEmoji] || "snowflake" : "snowflake");
     $(p + "TiltName").textContent = on ? (s.tiltShort || "Ice cold") : "Cold-blooded";
     $(p + "TiltNum").textContent = on ? t.toFixed(0) : "off";
     $(p + "TiltFill").style.width = (on ? t : 0) + "%";
@@ -674,11 +686,11 @@
         const cls = e.delta > 0 ? "win" : e.delta < 0 ? "lose" : "";
         rows.push(`<div class="lab-log-row result ${cls}">— round ${e.round}: ${e.delta >= 0 ? "+" : "-"}${money(e.delta)} → ${money(e.balance)}</div>`);
       } else if (e.kind === "loan") {
-        rows.push(`<div class="lab-log-row sys loan">💸 ${e.label} +${money(e.amount)}${e.reason ? ` — “${e.reason}”` : ""}</div>`);
+        rows.push(`<div class="lab-log-row sys loan">${Casino.icon("banknote")} ${e.label} +${money(e.amount)}${e.reason ? ` — “${e.reason}”` : ""}</div>`);
       } else if (e.kind === "break") {
-        rows.push(`<div class="lab-log-row sys">☕ Break ${e.phase}${e.actualMs ? ` (${Math.round(e.actualMs / 1000)}s)` : ""}</div>`);
+        rows.push(`<div class="lab-log-row sys">${Casino.icon("coffee")} Break ${e.phase}${e.actualMs ? ` (${Math.round(e.actualMs / 1000)}s)` : ""}</div>`);
       } else if (e.kind === "session") {
-        rows.push(`<div class="lab-log-row sys">${e.phase === "start" ? "▶ Session started" : `⏹ Session stopped — ${e.trigger}`}</div>`);
+        rows.push(`<div class="lab-log-row sys">${e.phase === "start" ? Casino.icon("play") + " Session started" : Casino.icon("square") + ` Session stopped — ${e.trigger}`}</div>`);
       } else { // move
         const betStr = e.bets
           ? e.bets.map((b) => `${b.spot}:${b.amount}`).join(" ")
@@ -698,7 +710,7 @@
   function renderButtons() {
     const running = R.isRunning();
     const labRun = $("labRun");
-    labRun.textContent = running ? "⏹ Stop" : "🤖 Start";
+    labRun.innerHTML = Casino.icon(running ? "square" : "play") + (running ? " Stop" : " Start");
     labRun.classList.toggle("ai-running", running);
     lab.classList.toggle("running", running);
     const badge = $("aiLabLive");
@@ -720,7 +732,7 @@
     }
     const panelBtn = document.getElementById("aiPlayBtn");
     if (panelBtn) {
-      panelBtn.textContent = running ? "⏹ Stop AI" : "🤖 Let AI play";
+      panelBtn.innerHTML = Casino.icon(running ? "square" : "bot") + (running ? " Stop AI" : " Let AI play");
       panelBtn.classList.toggle("ai-running", running);
     }
   }
@@ -800,7 +812,7 @@
     if (controls.querySelector("#aiPlayBar")) return;
     const bar = Casino.el("div", "ai-bar");
     bar.id = "aiPlayBar";
-    bar.innerHTML = `<button class="btn ai-btn" id="aiPlayBtn">🤖 Let AI play</button>
+    bar.innerHTML = `<button class="btn ai-btn" id="aiPlayBtn">${Casino.icon("bot")} Let AI play</button>
       <div class="ai-status">Opens the AI Lab below · model set there</div>`;
     controls.appendChild(bar);
     bar.querySelector("#aiPlayBtn").addEventListener("click", () => { R.toggle(id); openDrawer(); });
@@ -812,7 +824,7 @@
     if (!actions || document.getElementById("aiHeroBtn")) return;
     const b = Casino.el("button", "btn ai-btn");
     b.id = "aiHeroBtn";
-    b.textContent = "🤖 Let AI free-roam";
+    b.innerHTML = Casino.icon("bot") + " Let AI free-roam";
     b.style.flex = "0 0 auto";
     b.addEventListener("click", () => {
       R.settings.agentic = true;

@@ -23,7 +23,7 @@ const MinesGame = (() => {
   function render(view) {
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">💣 Mines</h2>
+        <h2 class="page-title">${Casino.icon("bomb", "ico-title")} Mines</h2>
         <p class="page-sub">Uncover gems to grow your multiplier. Hit a mine and you lose the bet. Cash out any time.</p>
         ${Casino.helpBtnHTML("minesHelp")}
       </div>

@@ -99,7 +99,7 @@ const VideoPokerGame = (() => {
   function render(view) {
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🎴 Video Poker</h2>
+        <h2 class="page-title">${Casino.icon("club", "ico-title")} Video Poker</h2>
         <p class="page-sub">Jacks or Better. Deal five, hold the ones you want, and draw. Pair of jacks or higher pays.</p>
         ${Casino.helpBtnHTML("vpHelp")}
       </div>
@@ -294,7 +294,7 @@ const VideoPokerGame = (() => {
         // Rigged odds: refund the stake on a non-paying hand.
         Casino.payout(bet);
         Casino.sound.play("cashout");
-        resultEl.textContent = "🍀 Lucky refund — stake returned.";
+        resultEl.textContent = "Lucky refund — stake returned.";
         resultEl.style.color = "var(--gold-2)";
         Casino.toast("Lucky refund — stake returned.", "info");
         view.querySelector("#lastWin").textContent = "+" + Casino.fmt(bet);

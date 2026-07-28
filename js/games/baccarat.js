@@ -86,7 +86,7 @@ const BaccaratGame = (() => {
     let side = "banker";
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🀄 Baccarat</h2>
+        <h2 class="page-title">${Casino.icon("heart", "ico-title")} Baccarat</h2>
         <p class="page-sub">Back the Player or Banker to land closest to 9 — or take the Tie. Banker is the smartest bet; Tie pays 8:1 but rarely hits.</p>
         ${Casino.helpBtnHTML("bacHelp")}
       </div>

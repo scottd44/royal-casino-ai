@@ -149,7 +149,53 @@ const Casino = (() => {
     howToOverlay.classList.add("show");
   }
   /** Markup for a small "How to play" button; wire it to openHowTo(...). */
-  function helpBtnHTML(id) { return `<button class="btn btn-ghost btn-sm howto-btn" id="${id}">❔ How to play</button>`; }
+  function helpBtnHTML(id) {
+    return `<button class="btn btn-ghost btn-sm howto-btn" id="${id}">${icon("circle-help")} How to play</button>`;
+  }
+
+  /* ---------- Icons (Lucide) ----------
+     No emoji anywhere in the chrome: emoji are OS-dependent bitmaps that
+     can't take our palette and render differently on every machine. Lucide
+     ships stroke SVGs that inherit `currentColor`, so an icon is just text
+     as far as the design system is concerned.
+
+     `icon(name)` returns a placeholder; Lucide swaps it for an <svg>. Since
+     the app rewrites #view with innerHTML constantly, a MutationObserver
+     re-runs the swap for markup injected after load. */
+  function icon(name, cls = "") {
+    return `<i data-lucide="${name}" class="ico ${cls}"></i>`;
+  }
+
+  const icons = (() => {
+    let running = false;   // createIcons() mutates the DOM — don't re-enter
+    let queued = false;
+
+    function paint() {
+      if (!window.lucide || !window.lucide.createIcons || running) return;
+      running = true;
+      try { window.lucide.createIcons(); } catch (e) { /* icons are cosmetic */ }
+      running = false;
+    }
+
+    function schedule() {
+      if (running || queued) return;
+      queued = true;
+      // setTimeout, not rAF: rAF can be suspended in a background tab, which
+      // would leave placeholders unrendered.
+      setTimeout(() => { queued = false; paint(); }, 0);
+    }
+
+    if (typeof MutationObserver === "function") {
+      new MutationObserver(schedule).observe(document.documentElement, {
+        childList: true, subtree: true,
+      });
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", paint, { once: true });
+    } else paint();
+
+    return paint;
+  })();
 
   /* ---------- Shared bet control ----------
      One standardized bet field used by every game: $-prefixed input with
@@ -311,8 +357,9 @@ const Casino = (() => {
         return;
       }
       const duration = Math.min(1.1, 0.28 + Math.log10(diff + 1) * 0.22);
+      let cu;
       try {
-        const cu = new C(el, to, {
+        cu = new C(el, to, {
           startVal: from,
           duration,
           useEasing: true,
@@ -325,11 +372,15 @@ const Casino = (() => {
 
       /* A stalled counter would leave a WRONG number on screen (e.g. "+$89"
          for a $750 result), so this is a correctness guarantee, not polish:
-         once the animation should be over, snap to the true value. */
+         once the animation should be over, snap to the true value.
+         The pending frame must be cancelled first — otherwise CountUp's next
+         tick simply overwrites whatever we just wrote. */
       setTimeout(() => {
         if (el.__fxCount !== mine) return; // superseded by a newer count
         const target = format(to);
-        if (el.textContent !== target) el.textContent = target;
+        if (el.textContent === target) return;
+        try { if (cu.rAF) cancelAnimationFrame(cu.rAF); } catch (e) { /* older build */ }
+        el.textContent = target;
       }, duration * 1000 + 350);
     }
 
@@ -457,7 +508,7 @@ const Casino = (() => {
   return {
     getBalance, bet, payout, setBalance, addFunds, reset,
     renderBalance, fmt, money, randInt, pick, el, toast, sound, cheat, fx,
-    betFieldHTML, wireBet, openHowTo, helpBtnHTML,
+    betFieldHTML, wireBet, openHowTo, helpBtnHTML, icon, icons,
     STARTING_BALANCE,
   };
 })();

@@ -41,7 +41,7 @@ const CoinflipGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🪙 Coinflip</h2>
+        <h2 class="page-title">${Casino.icon("circle-dollar-sign", "ico-title")} Coinflip</h2>
         <p class="page-sub">Call it right and compound your stake ${payoutFor(1)}× per flip. Cash out or push your streak — one wrong call ends it. Flip up to 3 coins for bigger jumps.</p>
         ${Casino.helpBtnHTML("cfHelp")}
       </div>
@@ -67,8 +67,8 @@ const CoinflipGame = (() => {
             </div>
           </div>
           <div class="cf-pick" id="cfPick" style="margin-top:14px;">
-            <button class="btn btn-block btn-blue" id="cfHeads" style="font-size:16px;padding:14px;">🙂 Heads</button>
-            <button class="btn btn-block btn-purple" id="cfTails" style="font-size:16px;padding:14px;margin-top:10px;">👑 Tails</button>
+            <button class="btn btn-block btn-blue" id="cfHeads" style="font-size:16px;padding:14px;">Heads</button>
+            <button class="btn btn-block btn-purple" id="cfTails" style="font-size:16px;padding:14px;margin-top:10px;">Tails</button>
           </div>
           <button class="btn btn-block btn-green" id="cfCash" style="margin-top:10px;font-size:16px;padding:14px;display:none;">Cash Out</button>
           <div class="stat-grid" style="margin-top:16px;">
@@ -100,8 +100,8 @@ const CoinflipGame = (() => {
     function renderFair() {
       const el = view.querySelector("#cfFair");
       el.innerHTML = phase === "over"
-        ? `🔓 Revealed · server <code>${server}</code> · hash <code>${seedHash(server)}</code>`
-        : `🔒 Provably fair · committed hash <code>${seedHash(server)}</code> · nonce ${nonce}`;
+        ? `Revealed · server <code>${server}</code> · hash <code>${seedHash(server)}</code>`
+        : `Provably fair · committed hash <code>${seedHash(server)}</code> · nonce ${nonce}`;
     }
     function pushHist(win, faces) {
       const el = view.querySelector("#cfHist");

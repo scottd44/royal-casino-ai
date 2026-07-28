@@ -40,7 +40,7 @@ Then open `http://localhost:PORT`. **Do not add a server or a build pipeline.**
 | Libraries must load from a plain `<script>` (UMD) or `<script type="module">` (ESM) | There is no bundler to resolve `import` from `node_modules` |
 | Prefer **vendoring** the single minified file into `js/vendor/` over a CDN link | The app is designed to run locally and offline |
 | No `import` / `export` in app code | Every file is a classic script sharing one global scope |
-| Every asset in `index.html` carries `?v=N` | **Bump it on every release** or browsers serve stale files. Currently **`v=43`** |
+| Every asset in `index.html` carries `?v=N` | **Bump it on every release** or browsers serve stale files. Currently **`v=46`** |
 
 ### Module pattern
 
@@ -75,6 +75,7 @@ works with no network.
 | [GSAP](https://gsap.com/docs/v3/) | 3.12.5 | `js/vendor/gsap.min.js` | `window.gsap` | Route transitions, staggered lobby/card reveals, micro-interactions |
 | [CountUp.js](https://github.com/inorganik/countUp.js) | 2.8.0 | `js/vendor/countUp.umd.js` | `window.countUp.CountUp` | Wallet ticker, AI Lab telemetry counters |
 | [canvas-confetti](https://github.com/catdad/canvas-confetti) | 1.9.2 | `js/vendor/confetti.browser.min.js` | `window.confetti` | Cash-out / jackpot bursts |
+| [Lucide](https://lucide.dev/icons/) | 0.469.0 | `js/vendor/lucide.min.js` | `window.lucide` | Every icon in the UI |
 
 They are loaded **before** `core.js` in `index.html`, each with the `?v=` cache-buster.
 
@@ -83,6 +84,37 @@ DPI-crisp `<canvas>` renderer (`renderChart()` in `agent-lab.js`) with grid line
 a gradient area fill and a hover crosshair — Chart.js would add ~200 KB and lose the crosshair
 readout for no gain. If you swap it in later, vendor the UMD build the same way and keep the
 `#aiChart` canvas id.
+
+### Icons — no emoji in the chrome
+
+**Never use an emoji as an icon.** Emoji are OS-supplied bitmaps: they ignore `color`, ignore
+stroke weight, can't take a gradient or a glow, and render as a different picture on macOS,
+Windows, Android and Linux. Lucide ships stroke SVGs that inherit `currentColor`, so an icon
+behaves like text as far as the design system is concerned.
+
+```js
+Casino.icon("wallet")            // -> '<i data-lucide="wallet" class="ico"></i>'
+Casino.icon("crown", "ico-title") // extra class for larger, gold page-title icons
+Casino.icons()                    // force a re-scan (rarely needed — see below)
+```
+
+Lucide replaces `<i data-lucide="…">` with an `<svg>`. Because the app rewrites `#view` with
+`innerHTML` on every route change, `core.js` runs a `MutationObserver` that re-paints icons for
+markup injected after load — **you do not need to call `Casino.icons()` yourself.** The observer
+is re-entrancy guarded (`createIcons()` mutates the DOM) and schedules with `setTimeout`, not
+`requestAnimationFrame`, so a backgrounded tab can't leave placeholders unrendered.
+
+Sizing is per-context in the `ICONS` section of `styles.css` (`.btn .ico`, `.sb-ico .ico`,
+`.ico-title`, …). Icons on lobby cards and sidebar rows inherit the game's `--accent`.
+
+**Where emoji are still allowed:** gameplay *content* only — slot reel symbols, card suits
+(`♠♥♦♣`), Mines/Tower tile faces, the mole, the snake, the chicken, RPS throws, dice pips. Those
+are the pieces being played, not chrome. Everything else — buttons, section headers, status
+messages, page titles, log rows — uses Lucide.
+
+> The `GAMES` array in `js/app.js` still carries its original `emoji` property. It is **data, not
+> presentation** — nothing renders it. Each entry also has an `icon` property (a Lucide name) and
+> that is what the sidebar and lobby cards draw. Don't delete `emoji`; don't render it either.
 
 ### Adding another library
 

@@ -22,7 +22,7 @@ const LimboGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🛸 Limbo</h2>
+        <h2 class="page-title">${Casino.icon("trending-up", "ico-title")} Limbo</h2>
         <p class="page-sub">Set a target multiplier and fire. If the random result lands at or above your target, you win. Higher targets pay more but hit less.</p>
         ${Casino.helpBtnHTML("limboHelp")}
       </div>

@@ -50,7 +50,7 @@ const WheelGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🎯 Wheel</h2>
+        <h2 class="page-title">${Casino.icon("target", "ico-title")} Wheel</h2>
         <p class="page-sub">Pick a risk level and spin. Every winning spin multiplies your running multiplier — keep spinning to grow it, but a bust segment wipes it out. Cash out any time to bank it.</p>
         ${Casino.helpBtnHTML("wheelHelp")}
       </div>
@@ -128,7 +128,7 @@ const WheelGame = (() => {
         const label = active ? total.toFixed(total < 100 ? 2 : 0) + "×" : m + "×";
         return `<span class="wheel-target" style="--c:${COLORS[col]}">${label}</span>`;
       });
-      chips.push(`<span class="wheel-target wheel-target-bust">💀 ${Math.round(r.bust / S * 100)}%</span>`);
+      chips.push(`<span class="wheel-target wheel-target-bust">Bust ${Math.round(r.bust / S * 100)}%</span>`);
       targetsEl.innerHTML = chips.join("");
     }
 
@@ -163,7 +163,7 @@ const WheelGame = (() => {
 
     function updateHistory() {
       view.querySelector("#history").innerHTML = history.slice(-14).reverse()
-        .map((h) => `<span class="pill ${h > 0 ? "win" : "lose"}">${h > 0 ? h.toFixed(2) + "×" : "💀"}</span>`).join("");
+        .map((h) => `<span class="pill ${h > 0 ? "win" : "lose"}">${h > 0 ? h.toFixed(2) + "×" : "bust"}</span>`).join("");
     }
 
     function spin() {
@@ -207,7 +207,7 @@ const WheelGame = (() => {
         history.push(0);
         hub.textContent = "BUST";
         hub.className = "wheel-hub lose";
-        view.querySelector("#lastSpin").textContent = "💀 bust";
+        view.querySelector("#lastSpin").textContent = "bust";
         Casino.sound.play("lose");
         Casino.toast(`Busted — lost ${Casino.money(bet)}.`, "lose");
         active = false;

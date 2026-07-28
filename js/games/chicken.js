@@ -27,7 +27,7 @@ const ChickenGame = (() => {
   function render(view) {
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🐔 Chicken Road</h2>
+        <h2 class="page-title">${Casino.icon("bird", "ico-title")} Chicken Road</h2>
         <p class="page-sub">Cross the road one lane at a time — each lane you clear grows your multiplier. Cash out before a car flattens you. Harder roads pay far more but the traffic is deadly.</p>
       </div>
       <div class="game-layout">
@@ -191,7 +191,7 @@ const ChickenGame = (() => {
 
     function endLoss() {
       active = false; busy = false;
-      msg.textContent = `💥 Splat! A car got you on lane ${crossed + 1}. Lost ${Casino.money(bet)}.`;
+      msg.textContent = `Splat! A car got you on lane ${crossed + 1}. Lost ${Casino.money(bet)}.`;
       msg.style.color = "var(--red)";
       lanes.forEach((l, i) => { if (i >= crossed) l.classList.add("dim"); });
       markNext();
@@ -206,7 +206,7 @@ const ChickenGame = (() => {
       chicken.classList.add("cheer");
       Casino.sound.play(mult >= 5 ? "bigwin" : "cashout");
       msg.textContent = reachedEnd
-        ? `🏆 Made it across! ${mult.toFixed(2)}× — +${Casino.fmt(winnings - bet)}!`
+        ? `Made it across! ${mult.toFixed(2)}× — +${Casino.fmt(winnings - bet)}!`
         : `Cashed out ${mult.toFixed(2)}× — +${Casino.fmt(winnings - bet)} profit!`;
       msg.style.color = "var(--green)";
       markNext();

@@ -339,7 +339,7 @@ const HoldemGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🃏 Texas Hold'em</h2>
+        <h2 class="page-title">${Casino.icon("diamond", "ico-title")} Texas Hold'em</h2>
         <p class="page-sub">No-limit Hold'em against three betting bots. Pick your buy-in — the bots match it and the blinds scale to suit. Bots read their real win-odds and bet accordingly — outplay them.</p>
       </div>
       <div class="game-layout">
@@ -357,15 +357,15 @@ const HoldemGame = (() => {
         <div class="panel">
           <div class="hc-status" id="hcStatus"></div>
           <div class="hc-controls" id="hcControls"></div>
-          <button class="btn btn-ghost btn-sm" id="hcInfoBtn" style="margin:12px 0;">ℹ️ How the odds work</button>
+          <button class="btn btn-ghost btn-sm" id="hcInfoBtn" style="margin:12px 0;">${Casino.icon("info")} How the odds work</button>
           <div class="history"><h4>Table log</h4><div class="history-list hc-log" id="hcLog"></div></div>
         </div>
       </div>
       <div class="report-overlay" id="hcInfoOverlay">
         <div class="report-card">
           <div class="report-head">
-            <h2 class="report-title">🃏 How Texas Hold'em works here</h2>
-            <button class="btn btn-ghost btn-sm" id="hcInfoClose">✕</button>
+            <h2 class="report-title">${Casino.icon("diamond","ico-title")} How Texas Hold'em works here</h2>
+            <button class="btn btn-ghost btn-sm" id="hcInfoClose">${Casino.icon("x")}</button>
           </div>
           <div class="report-section">
             <h4>The game</h4>
@@ -400,7 +400,7 @@ const HoldemGame = (() => {
           <div class="report-section">
             <h4>Edge</h4>
             <div class="info-body">There's no house rake — it's a pure skill game against the bots. Your edge is
-            reading spots better than they do (they're solid but beatable). The 😈 Rig deals <i>you</i> stronger
+            reading spots better than they do (they're solid but beatable). The Rig deals <i>you</i> stronger
             starting hands.</div>
           </div>
           <div class="report-actions"><button class="btn" id="hcInfoClose2">Got it</button></div>

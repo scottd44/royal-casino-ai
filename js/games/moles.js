@@ -39,7 +39,7 @@ const MolesGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🐹 Moles</h2>
+        <h2 class="page-title">${Casino.icon("hammer", "ico-title")} Moles</h2>
         <p class="page-sub">Whack holes to find the hidden moles. Each mole grows your multiplier — but an empty hole busts you. Fewer moles means bigger, riskier payouts.</p>
         ${Casino.helpBtnHTML("molHelp")}
       </div>

@@ -45,7 +45,7 @@ const RPSGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">✊ Rock Paper Scissors</h2>
+        <h2 class="page-title">${Casino.icon("hand", "ico-title")} Rock Paper Scissors</h2>
         <p class="page-sub">Beat the house to compound your stake ${WIN}× per win. Ties replay for free, a loss ends the streak. Cash out whenever you like.</p>
         ${Casino.helpBtnHTML("rpsHelp")}
       </div>
@@ -90,8 +90,8 @@ const RPSGame = (() => {
 
     function renderFair() {
       view.querySelector("#rpsFair").innerHTML = phase === "over"
-        ? `🔓 Revealed · server <code>${server}</code> · hash <code>${seedHash(server)}</code>`
-        : `🔒 Provably fair · committed hash <code>${seedHash(server)}</code> · nonce ${nonce}`;
+        ? `Revealed · server <code>${server}</code> · hash <code>${seedHash(server)}</code>`
+        : `Provably fair · committed hash <code>${seedHash(server)}</code> · nonce ${nonce}`;
     }
     function pushTrack(res, p, h) {
       const el = view.querySelector("#rpsTrack");

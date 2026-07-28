@@ -49,7 +49,7 @@ const PlinkoGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🟡 Plinko</h2>
+        <h2 class="page-title">${Casino.icon("git-fork", "ico-title")} Plinko</h2>
         <p class="page-sub">Drop the ball and let it bounce down the pegs. Edge slots pay huge but are rare;
           the middle pays under 1×. Pick your risk and rows, then drop as many as you like.</p>
         ${Casino.helpBtnHTML("plinkoHelp")}

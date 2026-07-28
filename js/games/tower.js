@@ -46,7 +46,7 @@ const TowerGame = (() => {
   function render(view) {
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🗼 Tower</h2>
+        <h2 class="page-title">${Casino.icon("layers", "ico-title")} Tower</h2>
         <p class="page-sub">Climb from the bottom. Pick a safe tile on each row to rise and grow your multiplier — one mine ends the run. Cash out any time.</p>
         ${Casino.helpBtnHTML("towerHelp")}
       </div>
@@ -171,7 +171,7 @@ const TowerGame = (() => {
       active = false;
       for (let i = r; i < ROWS; i++) revealRow(i, i === r ? hitCol : undefined);
       Casino.sound.play("lose");
-      msg.textContent = `💥 Mine on row ${r + 1}! Lost ${Casino.money(bet)}.`;
+      msg.textContent = `Mine on row ${r + 1}! Lost ${Casino.money(bet)}.`;
       msg.style.color = "var(--red)";
       markActiveRow();
       setControls(false);
@@ -185,7 +185,7 @@ const TowerGame = (() => {
       Casino.payout(winnings);
       active = false;
       Casino.sound.play("bigwin");
-      msg.textContent = `🏆 Reached the top! ${mult.toFixed(2)}× — +${Casino.fmt(winnings - bet)}!`;
+      msg.textContent = `Reached the top! ${mult.toFixed(2)}× — +${Casino.fmt(winnings - bet)}!`;
       msg.style.color = "var(--green)";
       markActiveRow();
       setControls(false);

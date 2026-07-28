@@ -20,10 +20,10 @@
     <div class="report-card">
       <div class="report-head">
         <div>
-          <h2 class="report-title">📊 Session Report</h2>
+          <h2 class="report-title">${Casino.icon("chart-line","ico-title")} Session Report</h2>
           <div class="report-sub" id="rSub"></div>
         </div>
-        <button class="btn btn-ghost btn-sm" id="rClose">✕</button>
+        <button class="btn btn-ghost btn-sm" id="rClose">${Casino.icon("x")}</button>
       </div>
       <div class="report-stats" id="rStats"></div>
       <div class="report-section">
@@ -35,7 +35,7 @@
         <div class="report-swing down" id="rDown"></div>
       </div>
       <div class="report-section" id="rDesperateWrap">
-        <h4>💸 Desperate measures</h4>
+        <h4>Desperate measures</h4>
         <div id="rDesperate" class="report-desperate"></div>
       </div>
       <div class="report-section" id="rBreaksWrap">
@@ -47,7 +47,7 @@
         <div class="report-narrative" id="rNarr"></div>
       </div>
       <div class="report-actions">
-        <button class="btn" id="rExport">⬇ Download report (JSON)</button>
+        <button class="btn" id="rExport">${Casino.icon("download")} Download report (JSON)</button>
         <button class="btn btn-ghost" id="rClose2">Close</button>
       </div>
     </div>`;
@@ -172,13 +172,13 @@
 
     const u = report.swings.upswing, d = report.swings.downswing;
     $("rUp").innerHTML = u.amount > 0
-      ? `<div class="swing-k">📈 Biggest upswing</div><div class="swing-v pos">+${fmt(u.amount)}</div>
+      ? `<div class="swing-k">${Casino.icon("trending-up")} Biggest upswing</div><div class="swing-v pos">+${fmt(u.amount)}</div>
          <div class="swing-d">rounds ${u.from}–${u.to}${u.game ? ` · mostly ${u.game}` : ""}</div>`
-      : `<div class="swing-k">📈 Biggest upswing</div><div class="swing-d">—</div>`;
+      : `<div class="swing-k">${Casino.icon("trending-up")} Biggest upswing</div><div class="swing-d">—</div>`;
     $("rDown").innerHTML = d.amount > 0
-      ? `<div class="swing-k">📉 Biggest downswing</div><div class="swing-v neg">-${fmt(d.amount)}</div>
+      ? `<div class="swing-k">${Casino.icon("trending-down")} Biggest downswing</div><div class="swing-v neg">-${fmt(d.amount)}</div>
          <div class="swing-d">rounds ${d.from}–${d.to}${d.game ? ` · mostly ${d.game}` : ""}</div>`
-      : `<div class="swing-k">📉 Biggest downswing</div><div class="swing-d">—</div>`;
+      : `<div class="swing-k">${Casino.icon("trending-down")} Biggest downswing</div><div class="swing-d">—</div>`;
 
     if (report.desperateMeasures && report.desperateMeasures.length) {
       $("rDesperateWrap").style.display = "";
