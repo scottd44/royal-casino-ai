@@ -162,7 +162,32 @@ const Casino = (() => {
      `icon(name)` returns a placeholder; Lucide swaps it for an <svg>. Since
      the app rewrites #view with innerHTML constantly, a MutationObserver
      re-runs the swap for markup injected after load. */
+  /* Raw inline SVGs for marks no icon set carries. Lucide has no snake and no
+     "rock", and guessing the closest name gives you a swimmer and a coffee
+     mug — so these are drawn explicitly. Keys are namespaced `rc:` and go
+     through the same icon() call sites, so GAMES entries, page titles and the
+     sidebar all pick them up with no special casing. */
+  const RAW_SVG = {
+    "rc:snake": `<svg class="ico %CLS%" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 18c3.4 0 3.4-4.5 6.8-4.5S13.2 18 16.6 18 20 13.5 20 11.5 18.4 8 16.6 8h-4"/>
+        <path d="M12.6 8a3 3 0 1 1 3-3"/><circle cx="15.6" cy="4.4" r=".9" fill="currentColor"/></svg>`,
+    // Heavy faceted stone — an octagon with interior facets reads as mass
+    "rc:rock": `<svg class="ico %CLS%" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+        <path d="M8 3h8l5 6-9 12L3 9z"/><path d="M8 3 7 9l5 12M16 3l1 6-5 12M3 9h18"/></svg>`,
+    "rc:paper": `<svg class="ico %CLS%" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+        <path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/></svg>`,
+    "rc:scissors": `<svg class="ico %CLS%" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="6" cy="18" r="2.6"/><circle cx="18" cy="18" r="2.6"/>
+        <path d="M7.8 16.2 18 3M16.2 16.2 6 3"/></svg>`,
+  };
+
   function icon(name, cls = "") {
+    const raw = RAW_SVG[name];
+    if (raw) return raw.replace("%CLS%", cls);
     return `<i data-lucide="${name}" class="ico ${cls}"></i>`;
   }
 

@@ -33,9 +33,9 @@
     { id: "reddog",    emoji: "🔴", icon: "circle-dot", name: "Red Dog",       desc: "Will the third card land between? Bet the spread.", tag: "Up to 11:1", accent: "#fb7185", provider: "Royal Live", render: (v) => RedDogGame.render(v) },
     { id: "battleship",emoji: "🚢", icon: "ship", name: "Battleship",      desc: "Buy shots at a hidden fleet — hit pieces, sink ships for big multipliers.", tag: "Up to 100×", accent: "#4d8cff", provider: "Royal Originals", render: (v) => BattleshipGame.render(v) },
     { id: "moles",     emoji: "🐹", icon: "hammer", name: "Moles",           desc: "Whack holes to find the moles — each one grows your multiplier.", tag: "Up to 122×", accent: "#e6c15a", provider: "Royal Originals", render: (v) => MolesGame.render(v) },
-    { id: "snakes",    emoji: "🐍", icon: "waves", name: "Snakes",          desc: "Roll around a 12-tile loop; dodge snakes, compound safe tiles.", tag: "Up to 1720×", accent: "#3ecf8e", provider: "Royal Originals", render: (v) => SnakesGame.render(v) },
+    { id: "snakes",    emoji: "🐍", icon: "rc:snake", name: "Snakes",          desc: "Roll around a 12-tile loop; dodge snakes, compound safe tiles.", tag: "Up to 1720×", accent: "#3ecf8e", provider: "Royal Originals", render: (v) => SnakesGame.render(v) },
     { id: "coinflip",  emoji: "🪙", icon: "circle-dollar-sign", name: "Coinflip",        desc: "Call heads or tails and compound 1.96× per flip.", tag: "Streak", accent: "#4d8cff", provider: "Royal Originals", render: (v) => CoinflipGame.render(v) },
-    { id: "rps",       emoji: "✊", icon: "hand", name: "Rock Paper Scissors", desc: "Beat the house to build a 1.96×-per-win streak.", tag: "Streak", accent: "#9d6bff", provider: "Royal Originals", render: (v) => RPSGame.render(v) },
+    { id: "rps",       emoji: "✊", icon: "rc:rock", name: "Rock Paper Scissors", desc: "Beat the house to build a 1.96×-per-win streak.", tag: "Streak", accent: "#9d6bff", provider: "Royal Originals", render: (v) => RPSGame.render(v) },
     { id: "keno",      emoji: "🔢", icon: "hash", name: "Keno",            desc: "Pick numbers, draw 10 of 40, chase up to 10,000×.", tag: "Up to 10000×", accent: "#fb7185", provider: "Royal Originals", render: (v) => KenoGame.render(v) },
   ];
 

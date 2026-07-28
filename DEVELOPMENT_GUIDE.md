@@ -40,7 +40,7 @@ Then open `http://localhost:PORT`. **Do not add a server or a build pipeline.**
 | Libraries must load from a plain `<script>` (UMD) or `<script type="module">` (ESM) | There is no bundler to resolve `import` from `node_modules` |
 | Prefer **vendoring** the single minified file into `js/vendor/` over a CDN link | The app is designed to run locally and offline |
 | No `import` / `export` in app code | Every file is a classic script sharing one global scope |
-| Every asset in `index.html` carries `?v=N` | **Bump it on every release** or browsers serve stale files. Currently **`v=52`** |
+| Every asset in `index.html` carries `?v=N` | **Bump it on every release** or browsers serve stale files. Currently **`v=64`** |
 
 ### Module pattern
 
@@ -107,10 +107,23 @@ is re-entrancy guarded (`createIcons()` mutates the DOM) and schedules with `set
 Sizing is per-context in the `ICONS` section of `styles.css` (`.btn .ico`, `.sb-ico .ico`,
 `.ico-title`, …). Icons on lobby cards and sidebar rows inherit the game's `--accent`.
 
-**Where emoji are still allowed:** gameplay *content* only — slot reel symbols, card suits
-(`♠♥♦♣`), Mines/Tower tile faces, the mole, the snake, the chicken, RPS throws, dice pips. Those
-are the pieces being played, not chrome. Everything else — buttons, section headers, status
-messages, page titles, log rows — uses Lucide.
+**Where emoji are still allowed:** card suits (`♠♥♦♣`) and dice pips (`⚀`–`⚅`) only. Everything
+else — including slot reel symbols, gem faces, Mines/Tower tiles, the mole, the snake and the RPS
+throws — is a drawn shape. The audit that keeps it that way:
+
+```bash
+# renders every game and fails on any emoji left in #view
+for g in slots gems dice mines crash ... ; do
+  chrome --headless=new --dump-dom "http://localhost:8000/index.html#$g"
+done
+```
+
+**When no icon set has the mark you need, draw it — never guess a near-miss name.** Lucide has no
+snake and no rock; `waves` renders a swimmer and a rounded-blob path reads as a coffee mug. Both
+shipped. Raw inline SVGs live in the `RAW_SVG` registry in `core.js` under an `rc:` namespace
+(`rc:snake`, `rc:rock`, `rc:paper`, `rc:scissors`) and flow through the same `Casino.icon()` call
+sites, so the sidebar, page title, lobby card and in-game marks all draw from one definition and
+cannot drift apart.
 
 > The `GAMES` array in `js/app.js` still carries its original `emoji` property. It is **data, not
 > presentation** — nothing renders it. Each entry also has an `icon` property (a Lucide name) and
@@ -173,7 +186,13 @@ module being edited.** `fx.burst()` throttles the two paths together (one burst 
    should be done. A no-op normally; a safety net when rAF is throttled (backgrounded tab, headless
    browser) or GSAP is missing. Staggers are capped at 0.6 s total so a 25-card grid can never keep
    content hidden for long.
-3. **A stalled counter shows a *wrong number*, not just a missing animation.** `fx.countTo()` snaps
+3. **3D transforms: rotate a dedicated `preserve-3d` child, never the styled box.** The coin flip
+   originally rotated a single face that also carried the box-shadow; at ~90° it went edge-on and
+   the shadow read as a hard slice through the coin. The correct structure is
+   `perspective` on the container → an untransformed scale target → a `preserve-3d` rotator →
+   two absolutely-positioned faces with `backface-visibility: hidden`, the back pre-rotated 180°.
+   Keep glows on the wrapper: a shadow on a rotating face will always clip when it turns edge-on.
+4. **A stalled counter shows a *wrong number*, not just a missing animation.** `fx.countTo()` snaps
    to the true value after the expected duration, guarded by a per-element token so a stale
    watchdog can't overwrite a newer count. Never start counters inside `requestAnimationFrame` —
    rAF can be suspended indefinitely and the figures would stay at zero.

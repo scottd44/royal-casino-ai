@@ -52,7 +52,7 @@ const SnakesGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">${Casino.icon("waves", "ico-title")} Snakes</h2>
+        <h2 class="page-title">${Casino.icon("rc:snake", "ico-title")} Snakes</h2>
         <p class="page-sub">Roll 2d6 and race clockwise around the loop. Safe tiles compound your multiplier; snakes bust you. Cash out or push your luck up to 5 rolls.</p>
         ${Casino.helpBtnHTML("snHelp")}
       </div>

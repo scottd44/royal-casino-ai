@@ -10,12 +10,13 @@ const RPSGame = (() => {
   const EDGE = 0.02; // per decisive round → RTP 0.98
   const WIN = 2 * (1 - EDGE); // 1.96×
   const MOVES = ["Rock", "Paper", "Scissors"];
-  /* Minimalist outlined marks — inline SVG so they inherit currentColor and
-     scale with the layout, unlike the emoji they replace. */
+  /* Marks come from the shared raw-SVG registry in core.js — one definition
+     feeds the buttons, the throw plates, the streak strip, the sidebar and the
+     page title, so they can never drift apart again. */
   const SVG = {
-    0: `<svg class="rps-svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M13 21c0-5 4-9 9-9h5c6 0 11 5 11 11s-5 11-11 11h-6c-4.5 0-8-3.5-8-8z"/><path d="M13 24H9a3 3 0 0 1 0-6h4"/></svg>`,
-    1: `<svg class="rps-svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M13 9h15l8 8v22H13z"/><path d="M28 9v8h8"/><path d="M19 24h11M19 30h11"/></svg>`,
-    2: `<svg class="rps-svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="34" r="5"/><circle cx="33" cy="34" r="5"/><path d="M18.5 30.5 34 10M29.5 30.5 14 10"/></svg>`,
+    0: Casino.icon("rc:rock", "rps-svg"),
+    1: Casino.icon("rc:paper", "rps-svg"),
+    2: Casino.icon("rc:scissors", "rps-svg"),
   };
   const NAME_OF = ["Rock", "Paper", "Scissors"];
 
@@ -52,7 +53,7 @@ const RPSGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">${Casino.icon("hand", "ico-title")} Rock Paper Scissors</h2>
+        <h2 class="page-title">${Casino.icon("rc:rock", "ico-title")} Rock Paper Scissors</h2>
         <p class="page-sub">Beat the house to compound your stake ${WIN}× per win. Ties replay for free, a loss ends the streak. Cash out whenever you like.</p>
         ${Casino.helpBtnHTML("rpsHelp")}
       </div>

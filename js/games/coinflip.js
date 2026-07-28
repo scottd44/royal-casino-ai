@@ -95,29 +95,48 @@ const CoinflipGame = (() => {
     /* The coin is built from CSS (radial gradients + a milled rim); the face is
        an engraved mark, not a glyph. `.cf-face` is the 3D-rotating element so
        the outer .cf-coin keeps its layout box for the agent's DOM reads. */
-    const faceMark = (f) => (f
-      ? `<span class="cf-mark cf-mark-h"></span>`
-      : `<span class="cf-mark cf-mark-t"></span>`);
+    /* A real two-sided coin: .cf-flip is the preserve-3d rotator carrying two
+       absolutely-positioned faces, the back pre-rotated 180deg, both with
+       backface-visibility hidden. Landing on tails means stopping on an odd
+       half-turn, so the reverse is genuinely what you see — no face swapping. */
+    function coinHTML(f) {
+      const state = f == null ? "idle" : f ? "heads" : "tails";
+      return `<div class="cf-coin ${state}">
+          <div class="cf-flip">
+            <div class="cf-face cf-front">${f == null
+              ? `<span class="cf-mark cf-mark-q"></span>`
+              : `<span class="cf-mark cf-mark-h"></span>`}</div>
+            <div class="cf-face cf-back"><span class="cf-mark cf-mark-t"></span></div>
+          </div>
+        </div>`;
+    }
 
     function renderCoins(faces, animate) {
       const wrap = view.querySelector("#cfCoins");
-      wrap.innerHTML = (faces || Array(coins).fill(null))
-        .map((f) => `<div class="cf-coin ${f == null ? "idle" : f ? "heads" : "tails"}">
-             <div class="cf-face">${f == null ? `<span class="cf-mark cf-mark-q"></span>` : faceMark(f)}</div>
-           </div>`).join("");
-      if (!animate || !faces) return;
+      const list = faces || Array(coins).fill(null);
+      wrap.innerHTML = list.map(coinHTML).join("");
 
-      /* GSAP 3D flip: multiple turns on Y, with a scale bump at the apex so the
-         coin reads as passing nearer the viewer rather than just spinning flat. */
+      const flips = [...wrap.querySelectorAll(".cf-flip")];
       const g = window.gsap;
-      if (!g || (Casino.fx && Casino.fx.reduced())) return;
-      wrap.querySelectorAll(".cf-face").forEach((face, i) => {
+      const still = !animate || !faces || !g || (Casino.fx && Casino.fx.reduced());
+
+      // Heads rests at 0deg (front showing), tails at 180deg (back showing).
+      if (still) {
+        flips.forEach((el, i) => {
+          if (list[i] != null) el.style.transform = `rotateY(${list[i] ? 0 : 180}deg)`;
+        });
+        return;
+      }
+
+      flips.forEach((el, i) => {
+        const spins = 3;                                  // whole turns before settling
+        const end = spins * 360 + (list[i] ? 0 : 180);
         g.timeline({ delay: i * 0.08 })
-          .fromTo(face,
-            { rotationY: 0, scale: 0.86 },
-            { rotationY: 1080, duration: 0.82, ease: "power4.out", force3D: true })
-          .to(face, { scale: 1.14, duration: 0.34, ease: "power2.out" }, 0)
-          .to(face, { scale: 1, duration: 0.44, ease: "back.out(1.7)" }, 0.34);
+          .fromTo(el, { rotateY: 0 }, { rotateY: end, duration: 0.9, ease: "power4.out" })
+          // scale lives on the OUTER coin so it never composes with the
+          // rotation matrix and skew the faces
+          .to(el.parentElement, { scale: 1.16, duration: 0.36, ease: "power2.out" }, 0)
+          .to(el.parentElement, { scale: 1, duration: 0.5, ease: "back.out(1.7)" }, 0.36);
       });
     }
     function renderFair() {

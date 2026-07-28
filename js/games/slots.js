@@ -5,15 +5,19 @@ const SlotsGame = (() => {
   // Symbols ordered rare -> common; weight controls appearance frequency.
   // Paytable tuned so the overall return-to-player is ~99% (≈1% house edge),
   // matching Dice/Mines/Crash/Plinko. Ordering is monotonic: rarer pays more.
+  /* `s` stays the identity key (evaluate() compares on it and uses it as a
+     counts[] key) — only the RENDERING changed. Each symbol draws as a CSS
+     shape via .sym-<s>, so nothing here depends on a font or an emoji table. */
   const SYMBOLS = [
-    { s: "7️⃣", name: "Seven", weight: 1, three: 60, two: 6 },
-    { s: "💎", name: "Diamond", weight: 2, three: 38, two: 5 },
-    { s: "🔔", name: "Bell", weight: 3, three: 18, two: 4 },
-    { s: "🍇", name: "Grapes", weight: 4, three: 10, two: 3 },
-    { s: "🍉", name: "Melon", weight: 5, three: 7, two: 2 },
-    { s: "🍋", name: "Lemon", weight: 6, three: 5, two: 1 },
-    { s: "🍒", name: "Cherry", weight: 8, three: 4, two: 1 },
+    { s: "seven",   name: "Seven",   weight: 1, three: 60, two: 6 },
+    { s: "diamond", name: "Diamond", weight: 2, three: 38, two: 5 },
+    { s: "bell",    name: "Bell",    weight: 3, three: 18, two: 4 },
+    { s: "clover",  name: "Clover",  weight: 4, three: 10, two: 3 },
+    { s: "star",    name: "Star",    weight: 5, three: 7,  two: 2 },
+    { s: "crown",   name: "Crown",   weight: 6, three: 5,  two: 1 },
+    { s: "cherry",  name: "Cherry",  weight: 8, three: 4,  two: 1 },
   ];
+  const symHTML = (sym) => `<span class="sym sym-${sym.s}" title="${sym.name}"></span>`;
 
   const weighted = [];
   SYMBOLS.forEach((sym) => { for (let i = 0; i < sym.weight; i++) weighted.push(sym); });
@@ -51,7 +55,7 @@ const SlotsGame = (() => {
             <div class="reels" id="reels">
               ${[0,1,2].map(() => `
                 <div class="reel" data-reel>
-                  <div class="reel-strip"><span>🍒</span></div>
+                  <div class="reel-strip"><span>${symHTML(SYMBOLS[6])}</span></div>
                 </div>`).join("")}
             </div>
             <div class="win-banner" id="winBanner"></div>
@@ -61,9 +65,9 @@ const SlotsGame = (() => {
           <div class="paytable">
             <table>
               <tr><td>Any three matching</td><td>up to 60×</td></tr>
-              <tr><td>7️⃣ 7️⃣ 7️⃣</td><td>60×</td></tr>
-              <tr><td>💎 💎 💎</td><td>38×</td></tr>
-              <tr><td>🔔 🔔 🔔</td><td>18×</td></tr>
+              <tr><td>${symHTML(SYMBOLS[0]).repeat(3)}</td><td>60×</td></tr>
+              <tr><td>${symHTML(SYMBOLS[1]).repeat(3)}</td><td>38×</td></tr>
+              <tr><td>${symHTML(SYMBOLS[2]).repeat(3)}</td><td>18×</td></tr>
               <tr><td>Any matching pair</td><td>1× – 6×</td></tr>
             </table>
           </div>
@@ -94,19 +98,19 @@ const SlotsGame = (() => {
       <h4>Goal</h4>
       <p>Set a bet and <b>Spin</b>. The three reels stop on a single <b>payline</b> across the middle. Match symbols on that line to win.</p>
       <h4>Payouts</h4>
-      <p><b>Three of a kind</b> pays the most — triple 7️⃣ is the top jackpot at 60×. Any <b>matching pair</b> pays a smaller amount. The full paytable is shown right on the machine.</p>
+      <p><b>Three of a kind</b> pays the most — triple <b>Seven</b> is the top jackpot at 60×. Any <b>matching pair</b> pays a smaller amount. The full paytable is shown right on the machine.</p>
       <h4>Odds</h4>
       <p>Every spin is independent and random. The reel weightings and paytable together give a fixed long-run return, so there's no "due" machine — just spin and enjoy the variance.</p>`));
 
     function setReel(reelEl, sym) {
-      reelEl.querySelector(".reel-strip").innerHTML = `<span>${sym.s}</span>`;
+      reelEl.querySelector(".reel-strip").innerHTML = `<span>${symHTML(sym)}</span>`;
     }
 
     // Fill a reel with a tall column of random symbols so the spin animation
     // has something to scroll (the strip translates up one symbol per loop).
     function fillSpinStrip(reelEl) {
       let html = "";
-      for (let i = 0; i < 12; i++) html += `<span>${spinReel().s}</span>`;
+      for (let i = 0; i < 12; i++) html += `<span>${symHTML(spinReel())}</span>`;
       reelEl.querySelector(".reel-strip").innerHTML = html;
     }
 

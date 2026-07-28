@@ -3590,31 +3590,42 @@ body::after {
    GAME COMPONENTS — Coinflip, RPS
    ============================================================ */
 
-/* ---------- Coinflip: milled metal coin ---------- */
-.cf-coins { perspective: 900px; }
+/* ---------- Coinflip: two-sided 3D coin ----------
+   Structure is deliberate:
+     .cf-coins  perspective (the camera)
+     .cf-coin   scale target only — never rotated, so scaling can't compose
+                with the rotation matrix and shear the faces
+     .cf-flip   preserve-3d rotator, the only element that spins
+     .cf-face   two absolutely-positioned siblings filling the box,
+                backface-visibility hidden, back pre-rotated 180deg
+   The earlier version rotated a single face inside a preserve-3d parent, so
+   at ~90deg it went edge-on and its box-shadow read as a hard slice through
+   the middle of the coin. Two proper faces cannot do that. */
+.cf-coins { perspective: 1000px; perspective-origin: 50% 44%; }
 .cf-coin {
+  position: relative;
   width: 84px; height: 84px;
   border-radius: 50%;
   background: none;
   border: 0;
   box-shadow: none;
   animation: none;
-  display: flex; align-items: center; justify-content: center;
-  /* Deliberately NOT preserve-3d. An ancestor .panel uses backdrop-filter,
-     which forces descendants to flatten; mixing that with preserve-3d made the
-     rotating face intersect the flattened plane and get sliced clean across
-     the middle. The coin has no back face to show, so a flat context spins it
-     correctly and can't clip. */
-  transform-style: flat;
+  transform-style: flat;          /* scale only — see note above */
+  will-change: transform;
+}
+.cf-flip {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
 }
 .cf-face {
-  width: 100%; height: 100%;
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  transform-style: flat;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  will-change: transform;
   /* struck-metal blank: off-axis highlight, darker lower half, milled rim */
   background:
     radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.55), transparent 46%),
@@ -3624,11 +3635,11 @@ body::after {
   box-shadow:
     inset 0 0 0 3px rgba(255, 244, 214, 0.5),
     inset 0 0 0 5px rgba(90, 72, 26, 0.55),
-    inset 0 -8px 16px rgba(0, 0, 0, 0.42),
-    0 8px 20px rgba(0, 0, 0, 0.5),
-    0 0 26px -6px var(--glow-gold);
+    inset 0 -8px 16px rgba(0, 0, 0, 0.42);
 }
-.cf-coin.tails .cf-face {
+/* The reverse is the tails side, permanently flipped away from the camera. */
+.cf-back {
+  transform: rotateY(180deg);
   background:
     radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.5), transparent 46%),
     radial-gradient(circle at 62% 74%, rgba(0, 0, 0, 0.45), transparent 52%),
@@ -3637,11 +3648,21 @@ body::after {
   box-shadow:
     inset 0 0 0 3px rgba(240, 244, 255, 0.5),
     inset 0 0 0 5px rgba(60, 64, 82, 0.55),
-    inset 0 -8px 16px rgba(0, 0, 0, 0.42),
-    0 8px 20px rgba(0, 0, 0, 0.5),
-    0 0 26px -6px rgba(169, 123, 255, 0.5);
+    inset 0 -8px 16px rgba(0, 0, 0, 0.42);
 }
-.cf-coin.idle .cf-face { filter: saturate(0.25) brightness(0.6); box-shadow: inset 0 0 0 3px rgba(255,255,255,0.16), inset 0 -8px 16px rgba(0,0,0,0.5); }
+/* Glow sits on the wrapper, not the faces — a shadow on a face is what
+   produced the "sliced" look when the face turned edge-on. */
+.cf-coin::after {
+  content: "";
+  position: absolute; inset: -6px;
+  border-radius: 50%;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), 0 0 30px -6px var(--glow-gold);
+  pointer-events: none;
+  z-index: -1;
+}
+.cf-coin.tails::after { box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), 0 0 30px -6px rgba(169, 123, 255, 0.55); }
+.cf-coin.idle .cf-face { filter: saturate(0.25) brightness(0.6); }
+.cf-coin.idle::after { box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5); }
 
 /* Engraved marks — struck into the face, not printed on it */
 .cf-mark { position: relative; width: 40%; height: 40%; }
@@ -3652,12 +3673,10 @@ body::after {
   color: rgba(48, 36, 8, 0.62);
   filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.35));
 }
-/* Heads: a spade, struck */
 .cf-mark-h::before {
   -webkit-mask: center / contain no-repeat url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2C9 6 4 8.5 4 13a4.5 4.5 0 0 0 7.2 3.6L10 22h4l-1.2-5.4A4.5 4.5 0 0 0 20 13c0-4.5-5-7-8-11z'/%3E%3C/svg%3E");
   mask: center / contain no-repeat url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2C9 6 4 8.5 4 13a4.5 4.5 0 0 0 7.2 3.6L10 22h4l-1.2-5.4A4.5 4.5 0 0 0 20 13c0-4.5-5-7-8-11z'/%3E%3C/svg%3E");
 }
-/* Tails: a diamond */
 .cf-mark-t::before {
   color: rgba(30, 32, 48, 0.6);
   -webkit-mask: center / contain no-repeat url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 21 12l-9 10-9-10z'/%3E%3C/svg%3E");
@@ -3876,3 +3895,78 @@ body::after {
   background: radial-gradient(circle at 40% 34%, #fff3cd, var(--gold) 55%, var(--gold-deep));
   box-shadow: 0 0 16px var(--glow-gold);
 }
+
+/* ============================================================
+   SLOT & GEM SYMBOLS — drawn, not typed
+   ------------------------------------------------------------
+   Every symbol is a masked SVG shape tinted by CSS, so it takes
+   the palette, scales cleanly, and renders identically on every
+   OS. Emoji could do none of those things.
+   ============================================================ */
+.sym, .gem {
+  display: inline-block;
+  width: 1em; height: 1em;
+  background: currentColor;
+  vertical-align: -0.12em;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-position: center;  mask-position: center;
+  -webkit-mask-size: contain;     mask-size: contain;
+}
+.reel .sym { width: 62px; height: 62px; }
+.gem-cell .gem { width: 46px; height: 46px; }
+.paytable .sym, .kn-paytable .sym, .paytable .gem { width: 17px; height: 17px; margin-right: 2px; }
+
+/* --- slot faces --- */
+.sym-seven {
+  color: #ff4d6d;
+  filter: drop-shadow(0 0 12px rgba(255, 77, 109, 0.7));
+  -webkit-mask-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 3h14v3.4L12.6 21H8.2l6.2-14H5z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 3h14v3.4L12.6 21H8.2l6.2-14H5z'/%3E%3C/svg%3E");
+}
+.sym-diamond, .gem-diamond {
+  color: #7dd3fc;
+  filter: drop-shadow(0 0 12px rgba(125, 211, 252, 0.7));
+  -webkit-mask-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 3h12l4 6-10 12L2 9z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 3h12l4 6-10 12L2 9z'/%3E%3C/svg%3E");
+}
+.sym-bell {
+  color: #f0c24f;
+  filter: drop-shadow(0 0 12px var(--glow-gold));
+  -webkit-mask-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2a2 2 0 0 1 2 2v.6A6.5 6.5 0 0 1 18.5 11v4l1.5 3H4l1.5-3v-4A6.5 6.5 0 0 1 10 4.6V4a2 2 0 0 1 2-2z'/%3E%3Ccircle cx='12' cy='20.4' r='1.9'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2a2 2 0 0 1 2 2v.6A6.5 6.5 0 0 1 18.5 11v4l1.5 3H4l1.5-3v-4A6.5 6.5 0 0 1 10 4.6V4a2 2 0 0 1 2-2z'/%3E%3Ccircle cx='12' cy='20.4' r='1.9'/%3E%3C/svg%3E");
+}
+.sym-clover {
+  color: #22e59a;
+  filter: drop-shadow(0 0 12px var(--glow-green));
+  -webkit-mask-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='8.4' cy='8.4' r='4.2'/%3E%3Ccircle cx='15.6' cy='8.4' r='4.2'/%3E%3Ccircle cx='12' cy='14' r='4.2'/%3E%3Cpath d='M11.2 15h1.6l.9 7h-3.4z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='8.4' cy='8.4' r='4.2'/%3E%3Ccircle cx='15.6' cy='8.4' r='4.2'/%3E%3Ccircle cx='12' cy='14' r='4.2'/%3E%3Cpath d='M11.2 15h1.6l.9 7h-3.4z'/%3E%3C/svg%3E");
+}
+.sym-star, .gem-star {
+  color: #ffdc86;
+  filter: drop-shadow(0 0 12px var(--glow-gold));
+  -webkit-mask-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m12 2 3 6.6 7.2.9-5.3 4.9 1.4 7.1L12 18l-6.3 3.5 1.4-7.1L1.8 9.5 9 8.6z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m12 2 3 6.6 7.2.9-5.3 4.9 1.4 7.1L12 18l-6.3 3.5 1.4-7.1L1.8 9.5 9 8.6z'/%3E%3C/svg%3E");
+}
+.sym-crown {
+  color: #a97bff;
+  filter: drop-shadow(0 0 12px var(--glow-purple));
+  -webkit-mask-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 7l4.5 4L12 4l4.5 7L21 7l-1.8 12H4.8z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 7l4.5 4L12 4l4.5 7L21 7l-1.8 12H4.8z'/%3E%3C/svg%3E");
+}
+.sym-cherry {
+  color: #ff6b8a;
+  filter: drop-shadow(0 0 12px rgba(255, 107, 138, 0.65));
+  -webkit-mask-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='7' cy='17' r='4.4'/%3E%3Ccircle cx='17.4' cy='16' r='4'/%3E%3Cpath d='M7 13C7 7 11 4 20 3.2' fill='none' stroke='%23000' stroke-width='1.8'/%3E%3Cpath d='M17.4 12.2C16 8 17 5 20 3.2' fill='none' stroke='%23000' stroke-width='1.8'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='7' cy='17' r='4.4'/%3E%3Ccircle cx='17.4' cy='16' r='4'/%3E%3Cpath d='M7 13C7 7 11 4 20 3.2' fill='none' stroke='%23000' stroke-width='1.8'/%3E%3Cpath d='M17.4 12.2C16 8 17 5 20 3.2' fill='none' stroke='%23000' stroke-width='1.8'/%3E%3C/svg%3E");
+}
+
+/* --- gem faces (share the diamond/star silhouettes, retinted) --- */
+.gem-orb, .gem-amethyst, .gem-sapphire, .gem-emerald, .gem-blank {
+  -webkit-mask-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7.5 2h9l5 7-9.5 13L2.5 9z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7.5 2h9l5 7-9.5 13L2.5 9z'/%3E%3C/svg%3E");
+}
+.gem-orb      { color: #d8b4fe; filter: drop-shadow(0 0 12px rgba(216, 180, 254, 0.7)); }
+.gem-amethyst { color: #a97bff; filter: drop-shadow(0 0 12px var(--glow-purple)); }
+.gem-sapphire { color: #4d8cff; filter: drop-shadow(0 0 12px rgba(77, 140, 255, 0.7)); }
+.gem-emerald  { color: #22e59a; filter: drop-shadow(0 0 12px var(--glow-green)); }
+.gem-blank    { color: rgba(255, 255, 255, 0.10); filter: none; }
