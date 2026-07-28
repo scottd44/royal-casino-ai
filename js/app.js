@@ -215,11 +215,11 @@
       view.querySelectorAll(".cat-chip").forEach((c) => c.classList.toggle("on", c === chip));
       const body = view.querySelector("#lobbyBody");
       body.innerHTML = lobbySections();
-      Casino.fx.reveal(body.querySelectorAll(".game-card"), { y: 14, stagger: 0.02 });
+      Casino.fx.reveal(body.querySelectorAll(".game-card"), { y: 22, stagger: 0.05, ease: "power3.out" });
       setActiveNav(lobbyFilter === "originals" ? "originals" : "lobby");
     });
 
-    Casino.fx.reveal(view.querySelectorAll(".game-card"), { y: 18, stagger: 0.025, delay: 0.06 });
+    Casino.fx.reveal(view.querySelectorAll(".game-card"), { y: 24, stagger: 0.05, delay: 0.05, ease: "power3.out" });
   }
 
   /* ============================================================
@@ -617,11 +617,16 @@
   // Global UI "click" blip for game controls — one place covers every game
   // (action buttons, quick-bet chips, tiles, hold slots, the roulette felt).
   // Capture phase so it fires regardless of per-game handlers.
+  const CLICKABLE =
+    "button, [data-bet], .tile, .vp-slot, .rt-num, .rt-out, .rt-doz, .rt-col, .rt-zero, .rt-chip-btn";
   document.addEventListener("click", (e) => {
-    if (e.target.closest(
-      "button, [data-bet], .tile, .vp-slot, .rt-num, .rt-out, .rt-doz, .rt-col, .rt-zero, .rt-chip-btn"
-    )) {
-      Casino.sound.play("click");
+    const hit = e.target.closest(CLICKABLE);
+    if (!hit) return;
+    Casino.sound.play("click");
+    // Tactile press on the real controls — every game's action buttons, the
+    // AI Lab's Start, quick-bet chips and reveal tiles, from one place.
+    if (hit.matches(".btn, .cat-chip, .icon-btn, .chip-btn, .rt-chip-btn, .tile, .brain-stage, .pm-item")) {
+      Casino.fx.press(hit);
     }
   }, true);
 

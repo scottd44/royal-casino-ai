@@ -141,7 +141,7 @@ const Casino = (() => {
     howToOverlay.innerHTML =
       `<div class="report-card howto-card">
         <div class="report-head"><h2 class="report-title">${title}</h2>
-          <button class="btn btn-ghost btn-sm" data-howto-close>✕</button></div>
+          <button class="btn btn-ghost btn-sm" data-howto-close>${icon("x")}</button></div>
         <div class="howto-body">${html}</div>
         <div class="report-actions"><button class="btn" data-howto-close>Got it</button></div>
       </div>`;
@@ -417,8 +417,9 @@ const Casino = (() => {
       list.forEach((n) => { n.style.opacity = ""; n.style.transform = ""; });
     }
 
-    /** Longest a staggered cascade may take, in seconds. */
-    const MAX_STAGGER_TOTAL = 0.6;
+    /** Longest a staggered cascade may take, in seconds. Sized so the lobby's
+        25 cards can run the full 0.05s stagger as one visible wave. */
+    const MAX_STAGGER_TOTAL = 1.3;
     /** Grace period after a tween's expected end before we force it visible. */
     const WATCHDOG_GRACE_MS = 250;
 
@@ -489,7 +490,20 @@ const Casino = (() => {
       return tween;
     }
 
-    return { reduced, countTo, burst, reveal, enter, resetMount, hasGsap: () => !!window.gsap };
+    /* Tactile click-down. Overshoots very slightly on the way back so the
+       control feels sprung rather than merely resized. clearProps hands the
+       transform back to CSS so the :hover lift keeps working afterwards. */
+    function press(el) {
+      if (!el || !window.gsap || reduced()) return;
+      /* A single fromTo(0.95 -> 1) is back at ~0.999 within 60ms, which the eye
+         never catches. Two stages give it an actual down-stroke: a fast bite
+         in, then a sprung release. */
+      return window.gsap.timeline({ overwrite: "auto" })
+        .to(el, { scale: 0.95, duration: 0.09, ease: "power2.out" })
+        .to(el, { scale: 1, duration: 0.34, ease: "back.out(2.6)", clearProps: "scale,transform" });
+    }
+
+    return { reduced, countTo, burst, reveal, enter, resetMount, press, hasGsap: () => !!window.gsap };
   })();
 
   function toast(msg, type = "info", ms = 2600) {

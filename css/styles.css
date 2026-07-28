@@ -3199,3 +3199,263 @@ svg.ico { overflow: visible; }
 .tilt-bar.hot ~ * #labTiltFace .ico { color: var(--red); }
 
 /* Reduced-motion users still get the icons, just no transitions (handled above) */
+
+/* ============================================================
+   PREMIUM LAYER — typography, true glass, depth, micro-interactions
+   ------------------------------------------------------------
+   Appended last so it wins on equal specificity. Everything here
+   is presentation; no IDs, attributes or DOM structure change.
+   ============================================================ */
+:root {
+  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  /* Real local monos as fallbacks so an offline launch never drops to a
+     proportional face and breaks digit alignment. */
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", SFMono-Regular,
+               "Roboto Mono", Menlo, Consolas, monospace;
+
+  /* Layered glass recipe */
+  --glass-bg: rgba(19, 25, 38, 0.62);
+  --glass-bg-soft: rgba(19, 25, 38, 0.44);
+  --glass-edge: rgba(255, 255, 255, 0.08);
+  --glass-edge-lit: rgba(255, 255, 255, 0.16);
+
+  /* Multi-layer elevation: contact shadow + ambient spread + inner lighting */
+  --lift-1:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 4px 6px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --lift-2:
+    0 2px 4px rgba(0, 0, 0, 0.35),
+    0 10px 20px rgba(0, 0, 0, 0.28),
+    0 24px 48px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --lift-3:
+    0 4px 8px rgba(0, 0, 0, 0.4),
+    0 16px 32px rgba(0, 0, 0, 0.34),
+    0 40px 80px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+body { font-family: var(--font-ui); }
+
+/* ---------- Numeric typeface ----------
+   Anything that shows money, a multiplier, a bet, odds or telemetry gets
+   JetBrains Mono. Fixed-advance digits stop values from jittering as they
+   tick, which is what makes a trading UI feel engineered rather than webby. */
+.wallet-amount, .wallet-cur, .pm-bal b,
+.stat .v, .lab-stat-v, .hud-metric b, .tilt-num,
+.multiplier-tag, .pill, .lobby-sub,
+.bet-input, .input[type="number"], input.lab-input, .hc-buyin #hcBuyInput,
+.dice-roll-num, .dice-marker, .crash-mult, .cf-mult, .wheel-hub, .wheel-target,
+.result-num, .hand-score, .sn-total, .bs-ship-bonus,
+.rt-total b, .rt-prev-pay, .rt-chip, .kn-paytable td:last-child, .paytable td:last-child,
+.hc-stack, .hc-pot b, .hc-buyin-blinds,
+.ai-lab-pnl, .swing-v, .sys-v, .sys-tiles b, .lab-games,
+.hero-stat b, .brain-stage small, .lab-badge, .howto-body td:last-child {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  letter-spacing: -0.03em;
+}
+
+/* Numbers carry a faint bloom of their own colour — reads as backlit glass */
+.wallet-amount, .stat .v, .lab-stat-v, .hud-metric b,
+.multiplier-tag, .crash-mult, .dice-roll-num, .cf-mult, .swing-v, .ai-lab-pnl {
+  text-shadow: 0 0 18px color-mix(in srgb, currentColor 34%, transparent);
+}
+.dice-roll-num, .crash-mult, .cf-mult, .result-num {
+  text-shadow: 0 0 34px color-mix(in srgb, currentColor 45%, transparent);
+}
+/* The big display numerals lose Cinzel — a mono face reads far more "terminal" */
+.dice-roll-num, .crash-mult, .cf-mult, .wheel-hub { font-family: var(--font-mono); font-weight: 700; }
+
+/* Headings tighten up */
+.page-title, .report-title, .lobby-head h2, .game-card h3, .hud-title {
+  font-family: var(--font-ui);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+/* ---------- True glass surfaces ----------
+   A translucent fill is what makes backdrop-filter visible at all; a solid
+   background would blur nothing. Two borders do the work: a light top edge
+   (the lit rim of the pane) and a darker outer ring. */
+.panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.012) 38%, transparent 70%),
+    var(--glass-bg);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--lift-2);
+  transition: box-shadow 0.3s var(--ease), border-color 0.3s ease;
+}
+/* Specular highlight running along the top edge of the pane */
+.panel::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 14%; right: 14%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-edge-lit), transparent);
+  pointer-events: none;
+}
+.panel:hover { border-color: rgba(255, 255, 255, 0.115); box-shadow: var(--lift-3); }
+
+/* .game-layout is the grid that holds the panels — the glass belongs on the
+   panes themselves, so this just sets the rhythm between them. */
+.game-layout { gap: 24px; }
+
+/* Same treatment for the other floating surfaces */
+.report-card, .profile-menu, .agent-hud, .toast {
+  box-shadow: var(--lift-3);
+  border-color: var(--glass-edge);
+}
+.stat, .lab-stat, .hud-metric, .vip-tier, .chat-bubble {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 60%),
+    var(--glass-bg-soft);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--lift-1);
+}
+
+/* ---------- Hover & press micro-interactions ---------- */
+.btn {
+  transition: all 0.2s ease;
+}
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    0 12px 28px rgba(0, 0, 0, 0.26),
+    0 0 30px -6px currentColor,
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.btn-ghost:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 12px 24px rgba(0, 0, 0, 0.22);
+  border-color: var(--glass-edge-lit);
+}
+.btn:active { transform: translateY(0); transition-duration: 0.06s; }
+
+.game-card { transition: all 0.28s var(--ease); }
+.game-card:hover { transform: translateY(-6px) scale(1.012); }
+
+.stat, .lab-stat, .cat-chip, .vip-tier, .kn-tile, .tile, .sb-item, .icon-btn {
+  transition: all 0.2s ease;
+}
+.stat:hover, .lab-stat:hover {
+  transform: translateY(-2px);
+  border-color: var(--glass-edge-lit);
+  box-shadow: var(--lift-2);
+}
+
+/* Focus ring picks up the glass edge too */
+:focus-visible {
+  box-shadow: var(--ring), 0 0 0 6px rgba(240, 194, 79, 0.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn:hover, .game-card:hover, .stat:hover, .lab-stat:hover { transform: none; }
+}
+
+/* ============================================================
+   AMBIENT DEPTH — what makes the glass actually read as glass
+   ------------------------------------------------------------
+   backdrop-filter only shows its work if there is something
+   luminous behind the pane. Over a near-black page the blur is
+   invisible and panels look like flat dark rectangles. These two
+   fixed layers sit behind all content: a slow aurora for colour,
+   and fine grain to kill gradient banding and add texture.
+   Both are `position: fixed`, so they never reflow or repaint
+   with the page and cost nothing to scroll.
+   ============================================================ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -25%;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(34% 40% at 20% 14%, rgba(139, 92, 246, 0.42), transparent 66%),
+    radial-gradient(30% 34% at 80% 8%,  rgba(240, 194, 79, 0.30), transparent 66%),
+    radial-gradient(40% 44% at 66% 86%, rgba(16, 185, 129, 0.26), transparent 68%),
+    radial-gradient(34% 38% at 8% 74%,  rgba(56, 120, 255, 0.34), transparent 66%),
+    radial-gradient(26% 30% at 46% 46%, rgba(236, 72, 153, 0.14), transparent 70%),
+    linear-gradient(180deg, #0d1320, #070a11 62%);
+  filter: blur(14px) saturate(135%);
+  animation: aurora 34s ease-in-out infinite alternate;
+}
+@keyframes aurora {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(2%, -2%, 0) scale(1.08); }
+  100% { transform: translate3d(-2%, 1.5%, 0) scale(1.03); }
+}
+
+/* Fine grain — inline SVG turbulence, no asset fetch */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
+}
+
+/* With light behind them, the panes can hold a brighter rim and a cooler fill */
+.panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.02) 34%, rgba(255, 255, 255, 0.006) 70%),
+    rgba(16, 22, 34, 0.55);
+  border-color: rgba(255, 255, 255, 0.10);
+}
+.panel::before { left: 8%; right: 8%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent); }
+
+/* Cards float on the same light */
+.game-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.012) 40%, transparent 72%),
+    rgba(16, 22, 34, 0.58);
+  /* No backdrop-filter here on purpose: 25 blurred layers is a real scroll
+     cost, and the aurora behind is already low-frequency, so a translucent
+     fill shows it through just as well. Blur is reserved for the few large
+     panes (.panel, modals, the dock) where it actually reads. */
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: var(--lift-1);
+}
+.game-card:hover {
+  box-shadow:
+    var(--lift-3),
+    0 0 0 1px color-mix(in srgb, var(--accent, var(--gold)) 30%, transparent),
+    0 20px 50px color-mix(in srgb, var(--accent, var(--gold)) 22%, transparent);
+}
+
+/* Sidebar and dock become panes of the same material */
+.sidebar {
+  background: linear-gradient(180deg, rgba(14, 19, 30, 0.78), rgba(8, 11, 18, 0.86));
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+}
+.topbar {
+  background: rgba(10, 14, 22, 0.62);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.ai-lab {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 120px),
+    rgba(12, 17, 26, 0.78);
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+/* Active sidebar row gets a real accent bleed */
+.sb-item.active {
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--accent, var(--gold)) 22%, transparent),
+    color-mix(in srgb, var(--accent, var(--gold)) 4%, transparent) 60%,
+    transparent 88%);
+  box-shadow: inset 0 0 26px -12px var(--accent, var(--gold));
+}

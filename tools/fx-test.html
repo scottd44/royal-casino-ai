@@ -1,0 +1,46 @@
+<!DOCTYPE html><html><body><iframe id="f" src="/index.html" width="1300" height="820" style="border:0"></iframe>
+<pre id="out">running…</pre><script>
+const f=document.getElementById("f"),out=document.getElementById("out");const L=[];
+const log=m=>{L.push(m);out.textContent=L.join("\n")};
+const ok=(n,c,e="")=>log((c?"OK   ":"FAIL ")+n+(e?"  ["+e+"]":""));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+f.addEventListener("load",async()=>{try{
+ const w=f.contentWindow,d=f.contentDocument,C=w.eval("Casino");
+ await sleep(900);
+ const cs=n=>w.getComputedStyle(n);
+ // 1. fonts
+ const wallet=d.getElementById("walletAmount");
+ ok("wallet uses mono stack", /JetBrains Mono/.test(cs(wallet).fontFamily), cs(wallet).fontFamily.split(",")[0]);
+ ok("body uses Inter", /Inter/.test(cs(d.body).fontFamily), cs(d.body).fontFamily.split(",")[0]);
+ ok("wallet has glow", cs(wallet).textShadow !== "none", cs(wallet).textShadow.slice(0,34));
+ // 2. glass
+ const panelSel=d.querySelector(".game-card");
+ ok("card bg is translucent", /rgba\(/.test(cs(panelSel).backgroundColor) && cs(panelSel).backgroundColor!=="rgba(0, 0, 0, 0)", cs(panelSel).backgroundColor);
+ ok("card has layered shadow", (cs(panelSel).boxShadow.match(/rgba/g)||[]).length>=2, (cs(panelSel).boxShadow.match(/rgba/g)||[]).length+" layers");
+ ok("card transition set", cs(panelSel).transitionDuration!=="0s", cs(panelSel).transitionDuration);
+ // 3. aurora + grain layers exist
+ const before=w.getComputedStyle(d.body,"::before"), after=w.getComputedStyle(d.body,"::after");
+ ok("aurora layer present", before.backgroundImage.includes("radial-gradient"), before.animationName);
+ ok("grain layer present", after.backgroundImage.includes("svg"), "opacity "+after.opacity);
+ // 4. GSAP press
+ ok("fx.press exists", typeof C.fx.press==="function");
+ const btn=d.getElementById("addFundsBtn");
+ // Drive the timeline explicitly: under virtual time an awaited sleep can
+ // skip straight past the down-stroke, so seek to it instead of racing rAF.
+ const tl=C.fx.press(btn); tl.pause(); tl.seek(0.09);
+ const scale=w.gsap.getProperty(btn,"scale");
+ ok("press bites down to 0.95", Math.abs(scale-0.95)<0.005, "scale="+Number(scale).toFixed(3));
+ tl.resume(); await sleep(700);
+ await sleep(600);
+ ok("press restores (clearProps)", !btn.getAttribute("style") || !/scale/.test(btn.getAttribute("style")||""), "style='"+(btn.getAttribute("style")||"")+"'");
+ // 5. staggered lobby wave
+ d.querySelector('[data-nav="lobby"]').click(); await sleep(120);
+ const cards=[...d.querySelectorAll(".game-card")];
+ const early=cards.filter(c=>+cs(c).opacity>0.5).length;
+ await sleep(2600);
+ const late=cards.filter(c=>+cs(c).opacity>0.9).length;
+ ok("cascade: not all cards visible at once", early<cards.length, early+"/"+cards.length+" at 120ms");
+ ok("cascade: all cards settle visible", late===cards.length, late+"/"+cards.length+" settled");
+ log("\nDONE");
+}catch(e){log("EXCEPTION "+(e&&e.stack||e))}document.title="fx";},{once:true});
+</script></body></html>

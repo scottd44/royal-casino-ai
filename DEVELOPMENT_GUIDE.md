@@ -40,7 +40,7 @@ Then open `http://localhost:PORT`. **Do not add a server or a build pipeline.**
 | Libraries must load from a plain `<script>` (UMD) or `<script type="module">` (ESM) | There is no bundler to resolve `import` from `node_modules` |
 | Prefer **vendoring** the single minified file into `js/vendor/` over a CDN link | The app is designed to run locally and offline |
 | No `import` / `export` in app code | Every file is a classic script sharing one global scope |
-| Every asset in `index.html` carries `?v=N` | **Bump it on every release** or browsers serve stale files. Currently **`v=46`** |
+| Every asset in `index.html` carries `?v=N` | **Bump it on every release** or browsers serve stale files. Currently **`v=52`** |
 
 ### Module pattern
 
@@ -138,7 +138,14 @@ Casino.fx.countTo(el, from, to, formatFn)  // tick a number (CountUp), or set it
 Casino.fx.burst("cashout" | "big" | "jackpot")   // confetti
 Casino.fx.reveal(nodes, { y, stagger, delay })   // staggered entrance (GSAP)
 Casino.fx.enter(el, { y })                       // fade/slide a container in (route change)
+Casino.fx.press(el)                              // tactile click-down (returns the GSAP timeline)
 ```
+
+`press()` is wired globally in `app.js` from the same capture-phase click handler that plays the
+click sound, so every `.btn`, chip, tile and Lab control gets it — including "Start Agent" and every
+game's bet button — without a single per-game listener. It is a two-stage timeline (0.09s bite to
+0.95, then a sprung `back.out` release); a single `fromTo` is back at ~0.999 within 60ms and the eye
+never catches it. `clearProps` hands the transform back to CSS so `:hover` keeps working.
 
 Where each library is wired:
 
@@ -224,9 +231,23 @@ once — that is the whole efficiency story of this codebase.
 4. **Numbers use tabular figures.** Any money, multiplier or telemetry value gets
    `font-variant-numeric: tabular-nums` and slightly negative `letter-spacing`. There is a `.num`
    utility class for one-offs.
-5. **Type:** Inter everywhere, `font-weight: 800` + `letter-spacing: -0.02em` for headings.
-   Cinzel is reserved for brand identity only — the wordmark, the hero `<h1>`, and the big display
-   numerals inside games (`.crash-mult`, `.dice-roll-num`, `.wheel-hub`, `.cf-mult`).
+5. **Type — two faces, one rule.** `--font-ui` (Inter) for everything that reads as language;
+   `--font-mono` (JetBrains Mono) for everything that reads as a *number*: balances, multipliers,
+   bet fields, odds, telemetry, P&L. Fixed-advance digits stop values jittering as they tick, which
+   is most of what makes a trading UI feel engineered rather than webby. Numeric readouts also carry
+   a faint `text-shadow` bloom of their own colour so they look backlit.
+   Cinzel is brand identity only — the wordmark and the hero `<h1>`. **Never put mono on prose**
+   (that's why `.game-tag`, `.chat-time` and the guide tables are explicitly excluded).
+6. **Depth is three layers, not one shadow.** `--lift-1/2/3` each combine a tight contact shadow,
+   a wide ambient shadow and an inset top highlight. Glass panes use a translucent fill + a lit top
+   rim (`.panel::before`) + `backdrop-filter`.
+7. **Glass needs something behind it.** `backdrop-filter` over a near-black page blurs nothing and
+   reads as a flat rectangle. Two fixed layers behind all content do that work: `body::before` is a
+   slow-drifting aurora, `body::after` is fine SVG grain that kills gradient banding. Both are
+   `position: fixed`, so they never reflow or repaint on scroll.
+   **Blur is reserved for the few large panes** (`.panel`, modals, sidebar, dock). Game cards get the
+   translucent fill but *no* `backdrop-filter` — 25 blurred layers is a real scroll cost for
+   near-zero gain when the thing behind them is already low-frequency.
 6. **Motion:** `--ease` = `cubic-bezier(0.22, 0.8, 0.28, 1)`. Hover lifts are `translateY(-4px…-6px)`
    over ~0.28s. Never animate `width`/`height`/`top`/`left` — use `transform` and `opacity`.
 
@@ -390,6 +411,16 @@ for f in js/*.js js/agent/*.js js/games/*.js; do node --check "$f" || echo "FAIL
 - [ ] **Stop** and **🔀 New game** still work; **Stop & Report** renders the session report.
 - [ ] Collapse the sidebar and confirm `document.querySelector('[data-nav="dice"]')` still resolves.
 - [ ] Check `prefers-reduced-motion` (macOS: System Settings → Accessibility → Display → Reduce motion).
+
+### Design/FX regression test — `tools/fx-test.html`
+
+13 assertions covering the presentation layer specifically: mono face on numeric readouts, Inter on
+body copy, numeric glow, translucent card fill, multi-layer shadows, the aurora and grain layers,
+`fx.press` reaching exactly 0.95 and cleanly restoring, and the lobby cascade (not all cards visible
+at 120 ms, all settled after). Runs in ~10 s with no Ollama needed.
+
+> Note: it drives the press timeline with `tl.pause(); tl.seek(0.09)` rather than sleeping. Under
+> Chrome's virtual time an awaited sleep can skip straight past a 90 ms down-stroke.
 
 ### Headless smoke test — `tools/smoke-test.html`
 
