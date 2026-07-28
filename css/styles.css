@@ -129,7 +129,11 @@ input:focus-visible, select:focus-visible { box-shadow: none; }
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border-right: 1px solid var(--line);
-  transition: flex-basis 0.26s var(--ease), width 0.26s var(--ease), transform 0.26s var(--ease);
+  /* Width/flex-basis are layout properties, so each frame of this relayouts
+     the main column. Kept short deliberately: the longer it runs, the more it
+     reads as lag rather than motion, and a second click during the tail feels
+     like the button is dead. */
+  transition: flex-basis 0.2s var(--ease), width 0.2s var(--ease), transform 0.24s var(--ease);
 }
 
 .sb-head {
@@ -1608,7 +1612,7 @@ body.sb-collapsed .sb-collapse { width: 100%; height: 40px; transform: rotate(18
   color: var(--text);
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.14s;
+  transition: background-color 0.14s, border-color 0.14s, color 0.14s, box-shadow 0.14s;
   font-size: 13px;
 }
 .chip-btn:hover { border-color: var(--gold); }
@@ -1659,7 +1663,7 @@ body.sb-collapsed .sb-collapse { width: 100%; height: 40px; transform: rotate(18
   color: var(--text);
   font-weight: 800;
   cursor: pointer;
-  transition: all 0.14s;
+  transition: background-color 0.14s, border-color 0.14s, color 0.14s, box-shadow 0.14s;
 }
 .rt-chip-btn:hover { border-color: var(--gold); }
 .rt-chip-btn.sel {
@@ -3075,7 +3079,7 @@ html, body { overflow-x: hidden; }
 .rt-board [data-bet]:hover { box-shadow: inset 0 0 0 2px var(--gold-2), 0 0 14px -2px var(--glow-gold); transform: translateY(-1px); }
 .rt-num.red, .rt-out.red, .rn.red { background: linear-gradient(180deg, #ff5f7d, #cf2544); }
 .rt-num.black, .rt-out.black, .rn.black { background: linear-gradient(180deg, #1a2130, #0a0d14); }
-.rt-chip-btn, .chip-btn { transition: all 0.16s var(--ease); }
+.rt-chip-btn, .chip-btn { transition: transform 0.16s var(--ease), box-shadow 0.16s ease, border-color 0.16s ease, color 0.16s ease, background-color 0.16s ease; }
 .rt-chip-btn.sel, .chip-btn.sel { box-shadow: 0 0 0 2px var(--gold-2), 0 0 20px -4px var(--glow-gold); }
 .result-num { box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.45), 0 0 34px -6px currentColor; }
 
@@ -3374,9 +3378,16 @@ body { font-family: var(--font-ui); }
   box-shadow: var(--lift-1);
 }
 
-/* ---------- Hover & press micro-interactions ---------- */
+/* ---------- Hover & press micro-interactions ----------
+   Explicit property lists, never `transition: all`. When the sidebar animates
+   its width, every one of these elements changes width too — and `all` makes
+   the browser animate THAT as well. 25 cards each running a nested layout
+   animation is what made the sidebar toggle take ~1s to move and feel dead on
+   the second click. Transitioning only compositor-friendly properties keeps
+   the resize to a single cheap relayout. */
 .btn {
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease,
+              background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 .btn:hover {
   transform: translateY(-2px);
@@ -3392,11 +3403,12 @@ body { font-family: var(--font-ui); }
 }
 .btn:active { transform: translateY(0); transition-duration: 0.06s; }
 
-.game-card { transition: all 0.28s var(--ease); }
+.game-card { transition: transform 0.28s var(--ease), box-shadow 0.28s ease, border-color 0.28s ease; }
 .game-card:hover { transform: translateY(-6px) scale(1.012); }
 
 .stat, .lab-stat, .cat-chip, .vip-tier, .kn-tile, .tile, .sb-item, .icon-btn {
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease,
+              background-color 0.2s ease, color 0.2s ease;
 }
 .stat:hover, .lab-stat:hover {
   transform: translateY(-2px);
@@ -3474,7 +3486,9 @@ body::after {
 /* Cards float on the same light */
 .game-card {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.012) 40%, transparent 72%),
+    /* top-edge sheen, dialled back ~20% — it was reading as a hotspot in the
+       upper-left rather than an even rim light */
+    linear-gradient(180deg, rgba(255, 255, 255, 0.048), rgba(255, 255, 255, 0.009) 40%, transparent 72%),
     rgba(16, 22, 34, 0.58);
   /* No backdrop-filter here on purpose: 25 blurred layers is a real scroll
      cost, and the aurora behind is already low-frequency, so a translucent

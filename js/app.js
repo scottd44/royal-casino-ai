@@ -118,24 +118,40 @@
     document.title = (byId(id)?.name || (PAGES[id] || PAGES.lobby).title) + " · Royal Casino";
   }
 
-  /* Sidebar collapse (desktop) — persisted. */
+  /* ---------- Sidebar controls ----------
+     Two affordances, one behaviour each per breakpoint:
+       · #sbCollapse (chevron, in the rail)  — desktop only, collapses to icons
+       · #sbToggle   (hamburger, in the top bar) — opens the drawer on mobile,
+         and mirrors the collapse on desktop, where it is still visible.
+     Bound by delegation on document so the handlers survive any re-render of
+     the header or rail, and can never be lost by an innerHTML rewrite. */
   const SB_KEY = "royal_casino_sidebar_collapsed_v1";
   if (localStorage.getItem(SB_KEY) === "1") document.body.classList.add("sb-collapsed");
-  const sbCollapse = document.getElementById("sbCollapse");
-  if (sbCollapse) {
-    sbCollapse.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const on = document.body.classList.toggle("sb-collapsed");
-      localStorage.setItem(SB_KEY, on ? "1" : "0");
-    });
+
+  const isDrawer = () => window.matchMedia("(max-width: 900px)").matches;
+  const closeSidebar = () => document.body.classList.remove("sb-open");
+
+  function toggleCollapse() {
+    const on = document.body.classList.toggle("sb-collapsed");
+    localStorage.setItem(SB_KEY, on ? "1" : "0");
   }
 
-  /* Sidebar drawer (mobile). */
-  const sbToggle = document.getElementById("sbToggle");
-  const sbScrim = document.getElementById("sbScrim");
-  const closeSidebar = () => document.body.classList.remove("sb-open");
-  if (sbToggle) sbToggle.addEventListener("click", (e) => { e.stopPropagation(); document.body.classList.toggle("sb-open"); });
-  if (sbScrim) sbScrim.addEventListener("click", closeSidebar);
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("#sbCollapse")) {
+      e.stopPropagation();
+      toggleCollapse();
+      return;
+    }
+    if (e.target.closest("#sbToggle")) {
+      e.stopPropagation();
+      // Above the breakpoint there is no drawer to open, so the hamburger
+      // would otherwise be an inert control sitting in the header.
+      if (isDrawer()) document.body.classList.toggle("sb-open");
+      else toggleCollapse();
+      return;
+    }
+    if (e.target.closest("#sbScrim")) closeSidebar();
+  });
 
   /* ============================================================
      Lobby
