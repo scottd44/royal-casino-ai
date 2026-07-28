@@ -184,7 +184,7 @@ input:focus-visible, select:focus-visible { box-shadow: none; }
   font-size: 12px;
   cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
-  transition: color 0.15s, background 0.15s, transform 0.26s var(--ease);
+  transition: color 0.15s, background 0.15s, width 0.26s var(--ease), height 0.26s var(--ease), transform 0.26s var(--ease);
 }
 .sb-collapse:hover { color: var(--gold-2); background: var(--glass-2); }
 
@@ -238,13 +238,13 @@ input:focus-visible, select:focus-visible { box-shadow: none; }
   line-height: 1;
   filter: saturate(1.1);
 }
-.sb-txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; transition: opacity 0.18s ease; }
+.sb-txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; transition: opacity 0.16s ease, max-width 0.26s var(--ease); }
 .sb-tag {
   font-size: 9.5px; font-weight: 800; letter-spacing: 0.3px;
   color: var(--bg-0);
   background: var(--gold);
   padding: 2px 6px; border-radius: 999px;
-  transition: opacity 0.18s ease;
+  transition: opacity 0.16s ease, max-width 0.26s var(--ease), padding 0.26s var(--ease);
 }
 .sb-tag.hot { background: var(--red); color: #fff; }
 .sb-tag.new { background: var(--green); color: #04241a; }
@@ -274,15 +274,41 @@ input:focus-visible, select:focus-visible { box-shadow: none; }
    both states — with the label gone it just pins the icon to the left edge
    and pushes the button to the right edge, mirroring the topbar's own
    corner-anchored layout. */
+/* Hiding with opacity alone leaves the element's WIDTH in the flex row, so the
+   icon never actually lands in the middle of the rail — it gets pushed left by
+   an invisible label (and further by an invisible badge on the AI Lab row).
+   Collapse the box, not just its paint. */
 body.sb-collapsed .sb-txt,
-body.sb-collapsed .sb-tag,
+body.sb-collapsed .sb-tag {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  margin: 0;
+  pointer-events: none;
+}
 body.sb-collapsed .sb-label { opacity: 0; pointer-events: none; }
 body.sb-collapsed .brand-name { max-width: 0; opacity: 0; pointer-events: none; }
-body.sb-collapsed .brand { gap: 0; }
 body.sb-collapsed .sb-label { height: 12px; padding: 8px 0 2px; overflow: hidden; }
 body.sb-collapsed .sb-item { justify-content: center; padding: 10px 0; gap: 0; }
-body.sb-collapsed .sb-head { padding: 0 10px; }
-body.sb-collapsed .sb-collapse { transform: rotate(180deg); }
+
+/* The nav scrolls (25 games), and its vertical scrollbar claims ~11px of the
+   74px rail. That silently narrows every row, so `justify-content: center`
+   centres each icon in the leftover space rather than in the rail — the whole
+   column sits ~5px left of true centre. Reclaim the width when collapsed; the
+   rail still scrolls by wheel/trackpad, and a visible scrollbar on a 74px
+   icon strip was never wanted anyway. */
+body.sb-collapsed .sb-nav { scrollbar-width: none; }
+body.sb-collapsed .sb-nav::-webkit-scrollbar { width: 0; height: 0; }
+
+/* A 74px rail can't hold the wordmark, the logo and a 26px toggle side by
+   side — that crowding is what left a dead gap next to the button and made
+   clicks miss. Collapsed, the header becomes one full-width toggle: centred,
+   and a much larger hit target. The logo returns on expand. */
+body.sb-collapsed .brand { max-width: 0; opacity: 0; pointer-events: none; gap: 0; }
+body.sb-collapsed .sb-head { padding: 0 10px; justify-content: center; gap: 0; }
+body.sb-collapsed .sb-collapse { width: 100%; height: 40px; transform: rotate(180deg); }
 
 .sb-scrim {
   position: fixed; inset: 0; z-index: 55;
@@ -308,10 +334,15 @@ body.sb-collapsed .sb-collapse { transform: rotate(180deg); }
      desktop-only "collapsed" (icon rail) state never applies here, so every
      collapsed override above (including brand-name's max-width) is undone. */
   body.sb-collapsed { --sbw: 262px; }
-  body.sb-collapsed .sb-txt, body.sb-collapsed .sb-tag,
   body.sb-collapsed .sb-label { opacity: 1; pointer-events: auto; }
+  body.sb-collapsed .sb-txt { max-width: none; opacity: 1; pointer-events: auto; }
+  body.sb-collapsed .sb-tag {
+    max-width: none; opacity: 1; pointer-events: auto; padding: 2px 6px;
+  }
   body.sb-collapsed .brand-name { max-width: 200px; opacity: 1; pointer-events: auto; }
-  body.sb-collapsed .brand { gap: 10px; }
+  body.sb-collapsed .brand { max-width: none; opacity: 1; pointer-events: auto; gap: 10px; }
+  body.sb-collapsed .sb-head { justify-content: flex-start; gap: 8px; }
+  body.sb-collapsed .sb-collapse { width: 26px; height: 40px; }
   body.sb-collapsed .sb-item { justify-content: flex-start; padding: 9px 12px; gap: 11px; }
   .sb-toggle { display: inline-flex; }
   .sb-collapse { display: none; }
@@ -3152,7 +3183,11 @@ input[type="checkbox"] { accent-color: var(--gold); }
 svg.ico { overflow: visible; }
 
 /* Anything that pairs an icon with a label lines them up on the text baseline */
-.btn, .cat-chip, .pm-item, .sb-item, .hero-stat, .hero-badge,
+/* NOTE: .sb-item and .pm-item are deliberately NOT in this list. Both are
+   full-width rows that already declare `display: flex; width: 100%` — forcing
+   inline-flex here shrink-wraps them, so a collapsed sidebar row centres its
+   icon inside a too-narrow box instead of the rail. */
+.btn, .cat-chip, .hero-stat, .hero-badge,
 .brain-stage, .lab-seg2 button, .lab-switch span, .hud-actions .btn {
   display: inline-flex;
   align-items: center;
