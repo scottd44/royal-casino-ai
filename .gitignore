@@ -15,3 +15,7 @@ web/dist/
 web/test-results/
 web/playwright-report/
 web/.env.local
+
+# Playwright artifacts (root, from a stray run)
+test-results/
+playwright-report/
