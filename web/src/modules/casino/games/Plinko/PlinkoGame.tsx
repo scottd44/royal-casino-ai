@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { GameLayout, Panel, PageHead, Stat, Button } from '@/platform/ui'
 import { Reveal } from '@/platform/motion'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 import BetField, { useBetRef, readBet } from '../../components/BetField'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
@@ -416,6 +417,7 @@ function drawScene(ctx: CanvasRenderingContext2D, w: number, h: number, layout: 
 type HistoryRow = { id: number; mult: number; win: boolean }
 
 export default function PlinkoGame() {
+  const isMobile = useIsMobile()
   const betRef = useBetRef()
   const stageRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -663,6 +665,21 @@ export default function PlinkoGame() {
             <canvas id="plinkoCanvas" ref={canvasRef} className="plinko-canvas absolute inset-0 h-full w-full" />
           </div>
 
+          {/* On mobile, GameLayout stacks to a single column, which put
+              #dropBtn below the whole controls panel — out of view below
+              the board with no way to drop a ball without scrolling past
+              it first. Rendered here instead (mobile only) so the button
+              is always in the same viewport as the board it controls; the
+              controls-panel copy below is gated to desktop, so there's
+              still exactly one #dropBtn in the DOM at a time (a duplicate
+              id would break both real usage and the agent's
+              `$("#dropBtn")` contract). */}
+          {isMobile && (
+            <Button id="dropBtn" variant="green" size="lg" block onClick={drop} className="mt-4">
+              Drop Ball
+            </Button>
+          )}
+
           <div className="divider my-5 h-px" style={{ background: 'var(--glass-line)' }} />
 
           <div className="history">
@@ -739,9 +756,11 @@ export default function PlinkoGame() {
             />
           </div>
 
-          <Button id="dropBtn" variant="green" size="lg" block onClick={drop} className="mt-4">
-            Drop Ball
-          </Button>
+          {!isMobile && (
+            <Button id="dropBtn" variant="green" size="lg" block onClick={drop} className="mt-4">
+              Drop Ball
+            </Button>
+          )}
 
           <AgentMount />
         </Panel>
