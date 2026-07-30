@@ -80,7 +80,16 @@ export function LabHud() {
     <Reveal
       preset="fadeIn"
       className="lab-hud glass fixed z-30 flex w-[280px] flex-col gap-2 rounded-[var(--radius-card)] p-3"
-      style={{ bottom: dockPx + 14, right: 16 }}
+      // Same fix as LabDrawer.tsx: `.glass`'s 62%-opacity blur reads as
+      // broken/see-through with nothing but a live game behind it. Inline
+      // wins the cascade over the class's own background.
+      style={{
+        bottom: dockPx + 14,
+        right: 16,
+        background: 'var(--color-panel-2)',
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
+      }}
     >
       <div className="flex items-center gap-2">
         <span className="relative flex h-2 w-2 shrink-0">

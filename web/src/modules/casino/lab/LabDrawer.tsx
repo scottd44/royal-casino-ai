@@ -230,6 +230,18 @@ export function LabDrawer() {
         height: containerHeight,
         borderColor: 'var(--glass-line)',
         transition: dragging ? undefined : 'height 0.2s var(--ease)',
+        // The `.glass` class this carries is a 62%-opacity blur, fine for a
+        // panel that sits over the app's own dark chrome -- but this drawer
+        // docks directly over a LIVE, brightly-animated game with nothing
+        // behind it to dim first, so the game showed through hard enough to
+        // read as broken/see-through rather than a deliberate frosted
+        // panel. Inline wins the cascade over the class's own background,
+        // so this alone makes it solid; backdropFilter is switched off too
+        // since blurring is pointless (and a wasted paint) once nothing
+        // behind it needs softening.
+        background: 'var(--color-panel-2)',
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
       }}
     >
       <div className="relative shrink-0">
