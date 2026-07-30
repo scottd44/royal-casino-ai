@@ -190,18 +190,22 @@ export default function Sidebar({
                   type="button"
                   onClick={() => toggle(grp.key)}
                   aria-expanded={open}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-[10px] text-faint hover:text-text hover:bg-white/5 transition-colors"
+                  className="w-full flex items-center gap-2 px-3 py-2 mb-0.5 rounded-[10px] text-text hover:bg-white/5 transition-colors"
+                  style={{
+                    background: 'color-mix(in srgb, var(--color-gold) 7%, transparent)',
+                    boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--color-gold) 14%, transparent)',
+                  }}
                   title={open ? `Collapse ${grp.label}` : `Expand ${grp.label}`}
                 >
-                  <Icon name={grp.icon} size={13} className="shrink-0 text-gold" />
-                  <span className="flex-1 text-left text-[10px] font-bold uppercase tracking-[0.14em] whitespace-nowrap truncate">
+                  <Icon name={grp.icon} size={14} className="shrink-0 text-gold" />
+                  <span className="flex-1 text-left text-[11.5px] font-bold uppercase tracking-[0.1em] whitespace-nowrap truncate text-gold">
                     {grp.label}
                   </span>
-                  <span className="num text-[10px] shrink-0">{grp.games.length}</span>
+                  <span className="num text-[10px] shrink-0 text-muted">{grp.games.length}</span>
                   <Icon
                     name="chevron-down"
                     size={14}
-                    className="shrink-0"
+                    className="shrink-0 text-muted"
                     style={{
                       transform: open ? 'rotate(180deg)' : 'none',
                       transition: 'transform 200ms var(--ease)',
