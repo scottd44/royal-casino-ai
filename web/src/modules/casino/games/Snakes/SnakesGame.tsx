@@ -8,7 +8,7 @@ import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money, randInt } from '@/platform/money/format'
 import { useIsMobile } from '@/platform/layout/useMediaQuery'
-import { sound } from '@/platform/audio/soundStore'
+import { snakesSounds } from './sounds'
 
 /* ============================================================
    Snakes — ported from js/games/snakes.js.
@@ -141,7 +141,10 @@ export default function SnakesGame() {
       const net = ret - stakeRef.current
       msgRef.current = `Cashed out ${multRef.current.toFixed(2)}× = ${money(ret)} (${net >= 0 ? '+' : ''}${fmt(net)}).`
       toneRef.current = net >= 0 ? 'win' : 'lose'
-      if (!auto) sound.play(net >= stakeRef.current * 3 ? 'bigwin' : 'cashout')
+      if (!auto) {
+        if (net >= stakeRef.current * 3) snakesSounds.bigwin()
+        else snakesSounds.cashout()
+      }
       repaint()
     },
     [payout, repaint],
@@ -230,7 +233,7 @@ export default function SnakesGame() {
 
     diceRef.current = [d1, d2]
     totalRef.current = sum
-    sound.play('tick')
+    snakesSounds.tick()
     repaint()
 
     const myGen = genRef.current
@@ -251,7 +254,7 @@ export default function SnakesGame() {
         phaseRef.current = 'over'
         msgRef.current = `Snake on tile ${land + 1}! Busted — lost ${money(stakeRef.current)}.`
         toneRef.current = 'lose'
-        sound.play('lose')
+        snakesSounds.lose()
         busyRef.current = false
         repaint()
         return
@@ -261,7 +264,7 @@ export default function SnakesGame() {
       const m = multAfter(snakesRef.current, rollsRef.current)
       multRef.current = m
       landedRef.current = { ...landedRef.current, [land]: { kind: 'safe', step: m / prevMult } }
-      sound.play('win')
+      snakesSounds.win()
 
       if (rollsRef.current >= MAX_ROLLS) {
         msgRef.current = `Survived all ${MAX_ROLLS} rolls at ${m.toFixed(2)}× — auto cash-out!`

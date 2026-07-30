@@ -6,7 +6,7 @@ import BetField, { useBetRef, readBet } from '../../components/BetField'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money, randInt, pick } from '@/platform/money/format'
-import { sound } from '@/platform/audio/soundStore'
+import { minesSounds } from './sounds'
 
 /* ============================================================
    Mines — ported from js/games/mines.js.
@@ -126,7 +126,7 @@ export default function MinesGame() {
     setActive(false)
     setHitIdx(idx)
     revealAll(idx)
-    sound.play('lose')
+    minesSounds.lose()
     setMsg(`Boom — you hit a mine and lost ${money(stakeRef.current)}.`)
     setMsgTone('lose')
   }
@@ -142,7 +142,8 @@ export default function MinesGame() {
     activeRef.current = false
     setActive(false)
     revealAll(-1)
-    sound.play(mult >= 3 ? 'bigwin' : 'cashout')
+    if (mult >= 3) minesSounds.bigwin()
+    else minesSounds.cashout()
     setMsg(`Cashed out ${mult.toFixed(2)}× — +${fmt(winnings - stakeRef.current)} profit!`)
     setMsgTone('win')
   }

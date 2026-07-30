@@ -7,7 +7,7 @@ import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt } from '@/platform/money/format'
 import { useIsMobile } from '@/platform/layout/useMediaQuery'
-import { sound } from '@/platform/audio/soundStore'
+import { diceSounds } from './sounds'
 
 /* ============================================================
    Dice — ported from js/games/dice.js.
@@ -126,7 +126,7 @@ export default function DiceGame() {
     let ticks = 0
     const anim = setInterval(() => {
       setDisplay((Math.random() * 100).toFixed(2))
-      sound.play('tick')
+      diceSounds.tick()
       if (++ticks > TICKS) {
         clearInterval(anim)
         setDisplay(result.toFixed(2))
@@ -135,12 +135,13 @@ export default function DiceGame() {
         if (won) {
           const winnings = Math.floor(stake * mult)
           payout(winnings)
-          sound.play(mult >= 10 ? 'bigwin' : 'win')
+          if (mult >= 10) diceSounds.bigwin()
+          else diceSounds.win()
           setMsg(`${result.toFixed(2)} is ${mode} ${t} — won +${fmt(winnings - stake)}!`)
           burstIdRef.current += 1
           setBurstId(burstIdRef.current)
         } else {
-          sound.play('lose')
+          diceSounds.lose()
           setMsg(`${result.toFixed(2)} is not ${mode} ${t}. You lose.`)
         }
 

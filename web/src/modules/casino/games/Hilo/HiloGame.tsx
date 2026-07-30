@@ -9,7 +9,7 @@ import BetField, { useBetRef, readBet } from '../../components/BetField'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money, randInt, pick } from '@/platform/money/format'
-import { sound } from '@/platform/audio/soundStore'
+import { hiloSounds } from './sounds'
 import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
@@ -183,7 +183,7 @@ export default function HiloGame(): JSX.Element {
       setHistory((h) => [...h, { label: dealtLabel, win: true }])
       setMsg(`${dealtLabel} — correct! Now ${mult.toFixed(2)}×.`)
       setMsgTone('win')
-      sound.play('win')
+      hiloSounds.win()
       // Round stays live — startBtn/betInput stay locked, cashBtn unlocks
       // once runMult clears 1 (see the cashBtn disabled expression below).
     } else {
@@ -192,7 +192,7 @@ export default function HiloGame(): JSX.Element {
       setHistory((h) => [...h, { label: dealtLabel, win: false }])
       setMsg(`${dealtLabel} — wrong. You lose ${money(stakeRef.current)}.`)
       setMsgTone('lose')
-      sound.play('lose')
+      hiloSounds.lose()
       runMultRef.current = 1
       setRunMult(1)
     }
@@ -207,7 +207,8 @@ export default function HiloGame(): JSX.Element {
     setActive(false)
     setMsg(`Cashed out ${mult.toFixed(2)}× — +${fmt(winnings - stakeRef.current)} profit!`)
     setMsgTone('win')
-    sound.play(mult >= 10 ? 'bigwin' : 'cashout')
+    if (mult >= 10) hiloSounds.bigwin()
+    else hiloSounds.cashout()
   }
 
   const rank = current?.rank ?? null

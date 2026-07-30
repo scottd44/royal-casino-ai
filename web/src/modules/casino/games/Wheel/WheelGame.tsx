@@ -6,7 +6,7 @@ import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money } from '@/platform/money/format'
 import { toast } from '@/platform/ui/toast'
-import { sound } from '@/platform/audio/soundStore'
+import { wheelSounds } from './sounds'
 
 /* ============================================================
    Wheel — ported from js/games/wheel.js. Pick a risk level and spin. Every
@@ -282,7 +282,7 @@ export default function WheelGame() {
     let tickGap = 90
     const scheduleTick = () => {
       tickTimerRef.current = setTimeout(() => {
-        sound.play('tick')
+        wheelSounds.tick()
         tickGap = Math.min(340, tickGap * 1.14)
         scheduleTick()
       }, tickGap)
@@ -309,7 +309,7 @@ export default function WheelGame() {
       historyIdRef.current += 1
       setHistory((h) => [...h.slice(-13), { id: historyIdRef.current, mult: 0 }])
       setLastSpinLabel('bust')
-      sound.play('lose')
+      wheelSounds.lose()
       toast(`Busted — lost ${money(betAmountRef.current)}.`, 'lose')
       setActive(false)
       setMult(0)
@@ -326,14 +326,16 @@ export default function WheelGame() {
     historyIdRef.current += 1
     setHistory((h) => [...h.slice(-13), { id: historyIdRef.current, mult: seg.mult }])
     setLastSpinLabel('×' + seg.mult)
-    sound.play(seg.mult >= 5 ? 'bigwin' : 'win')
+    if (seg.mult >= 5) wheelSounds.bigwin()
+    else wheelSounds.win()
   }
 
   function cashOut() {
     if (!active || spinning || mult <= 0) return
     const winnings = Math.floor(betAmountRef.current * mult * HOUSE_EDGE)
     payout(winnings)
-    sound.play(mult >= 5 ? 'bigwin' : 'cashout')
+    if (mult >= 5) wheelSounds.bigwin()
+    else wheelSounds.cashout()
     toast(`Cashed out ${mult.toFixed(2)}× — +${fmt(winnings - betAmountRef.current)} profit!`, 'win')
     setActive(false)
     setMult(0)

@@ -9,7 +9,8 @@ import { LabHud } from '@/modules/casino/lab/LabHud'
 import { LabReportModal } from '@/modules/casino/lab/LabReportModal'
 import { useLabUiStore } from '@/modules/casino/lab/labUiStore'
 import { useIsMobile } from '@/platform/layout/useMediaQuery'
-import { sound, useSoundStore } from '@/platform/audio/soundStore'
+import { soundPref, useSoundStore } from '@/platform/audio/soundStore'
+import { defaultPack } from '@/platform/audio/defaultPack'
 import { useGlobalClickSound } from '@/platform/audio/useGlobalClickSound'
 // LabDrawer/LabHud below are now the always-mounted component that keeps
 // `royalAgent` (platform/agent/agentUi.ts) alive — it's constructed at
@@ -145,8 +146,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
             aria-label={muted ? 'Sound off — click to unmute' : 'Sound on — click to mute'}
             title={muted ? 'Sound off — click to unmute' : 'Sound on — click to mute'}
             onClick={() => {
-              sound.toggleMute()
-              if (!useSoundStore.getState().muted) sound.play('click')
+              soundPref.toggleMute()
+              if (!useSoundStore.getState().muted) defaultPack.click()
             }}
             className="shrink-0 rounded-[10px] p-2 text-muted transition-colors hover:bg-white/5 hover:text-text"
           >

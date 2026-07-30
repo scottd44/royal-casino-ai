@@ -12,7 +12,7 @@ import type { CardSuit } from '../../components/Card'
 import { Felt } from '../../components/Felt'
 import BetField, { useBetRef, readBet } from '../../components/BetField'
 import AgentMount from '../../components/AgentMount'
-import { sound } from '@/platform/audio/soundStore'
+import { redDogSounds } from './sounds'
 
 /* ============================================================
    Red Dog (Acey-Deucey) — ported from js/games/reddog.js. Two cards are
@@ -178,7 +178,11 @@ export default function RedDogGame(): JSX.Element {
       if (net > bestRef.current) bestRef.current = net
       busyRef.current = false
       pendingRef.current = null
-      sound.play(tone === 'win' ? (net >= wagerRef.current * 4 ? 'bigwin' : 'win') : tone === 'lose' ? 'lose' : 'cashout')
+      if (tone === 'win') {
+        if (net >= wagerRef.current * 4) redDogSounds.bigwin()
+        else redDogSounds.win()
+      } else if (tone === 'lose') redDogSounds.lose()
+      else redDogSounds.cashout()
       repaint()
     },
     [repaint],
@@ -204,7 +208,7 @@ export default function RedDogGame(): JSX.Element {
     c1Ref.current = c1
     c2Ref.current = c2
     dealGenRef.current += 1
-    sound.play('tick')
+    redDogSounds.tick()
     const a = rv(c1)
     const b = rv(c2)
 

@@ -8,7 +8,7 @@ import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { toast } from '@/platform/ui/toast'
 import { fmt } from '@/platform/money/format'
-import { sound } from '@/platform/audio/soundStore'
+import { kenoSounds } from './sounds'
 import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
@@ -183,7 +183,7 @@ export default function KenoGame() {
           return
         }
         picksRef.current.add(n)
-        sound.play('tick')
+        kenoSounds.tick()
       }
       repaint()
     },
@@ -205,7 +205,7 @@ export default function KenoGame() {
     resetBoard()
     const pool = shuffledPool()
     picksRef.current = new Set(pool.slice(0, 8))
-    sound.play('tick')
+    kenoSounds.tick()
     repaint()
   }, [repaint, resetBoard])
 
@@ -256,7 +256,12 @@ export default function KenoGame() {
       text: `${matches}/${picksRef.current.size} hit · ${round2(pay)}× · ${net >= 0 ? '+' + fmt(net) : '-' + fmt(-net)}`,
       tone: net > 0 ? 'win' : 'lose',
     }
-    sound.play(net > 0 ? (pay >= 10 ? 'bigwin' : 'win') : 'lose')
+    if (net > 0) {
+      if (pay >= 10) kenoSounds.bigwin()
+      else kenoSounds.win()
+    } else {
+      kenoSounds.lose()
+    }
     repaint()
   }, [betRef, payout, placeBet, repaint, resetBoard])
 

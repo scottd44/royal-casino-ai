@@ -5,7 +5,7 @@ import { Reveal } from '@/platform/motion'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { money } from '@/platform/money/format'
-import { sound } from '@/platform/audio/soundStore'
+import { holdemSounds } from './sounds'
 import { Card } from '../../components/Card'
 import type { CardSuit } from '../../components/Card'
 import { Felt } from '../../components/Felt'
@@ -117,8 +117,10 @@ export default function HoldemGame() {
     if (!tbl) return
     stacksRef.current = tbl.T.players.map((p) => p.stack)
     const won = tbl.T.result?.winnings[0] || 0
-    if (won > 0) sound.play(won >= blindsRef.current.bb * 20 ? 'bigwin' : 'win')
-    else if (!tbl.T.players[0].folded) sound.play('lose')
+    if (won > 0) {
+      if (won >= blindsRef.current.bb * 20) holdemSounds.bigwin()
+      else holdemSounds.win()
+    } else if (!tbl.T.players[0].folded) holdemSounds.lose()
     log(won > 0 ? `You won ${money(won)}.` : 'Hand over.')
     awaitingHumanRef.current = false
     repaint()

@@ -6,7 +6,7 @@ import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money } from '@/platform/money/format'
 import { toast } from '@/platform/ui/toast'
-import { sound } from '@/platform/audio/soundStore'
+import { plinkoSounds } from './sounds'
 
 /* ============================================================
    Plinko — ported from js/games/plinko.js. A genuine Galton board: drop a
@@ -615,7 +615,12 @@ export default function PlinkoGame() {
       writeBallsLive(ballsLiveCountRef.current)
 
       if (won > 0) payout(won)
-      sound.play(net > 0 ? (mult >= 10 ? 'bigwin' : 'win') : 'lose')
+      if (net > 0) {
+        if (mult >= 10) plinkoSounds.bigwin()
+        else plinkoSounds.win()
+      } else {
+        plinkoSounds.lose()
+      }
 
       setLastMultText(formatDropResult(mult))
       setHistory((h) => [...h.slice(-13), { id: ++historyIdRef.current, mult, win: net > 0 }])

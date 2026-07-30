@@ -12,7 +12,7 @@ import type { CardSuit } from '../../components/Card'
 import { Felt } from '../../components/Felt'
 import BetField, { useBetRef, readBet } from '../../components/BetField'
 import AgentMount from '../../components/AgentMount'
-import { sound } from '@/platform/audio/soundStore'
+import { casinoWarSounds } from './sounds'
 
 /* ============================================================
    Casino War — ported from js/games/casinowar.js. Highest card wins (Aces
@@ -153,7 +153,9 @@ export default function CasinoWarGame() {
     if (net > bestRef.current) bestRef.current = net
     busyRef.current = false
     tieRef.current = false
-    sound.play(tone === 'win' ? 'win' : tone === 'lose' ? 'lose' : 'cashout')
+    if (tone === 'win') casinoWarSounds.win()
+    else if (tone === 'lose') casinoWarSounds.lose()
+    else casinoWarSounds.cashout()
     repaint()
   }, [repaint])
 
@@ -185,7 +187,7 @@ export default function CasinoWarGame() {
     pRef.current = p
     dRef.current = d
     dealGenRef.current += 1
-    sound.play('tick')
+    casinoWarSounds.tick()
     repaint()
 
     if (rv(p) > rv(d)) {
@@ -199,7 +201,7 @@ export default function CasinoWarGame() {
       // see the render section and the file-level comment above.
       tieRef.current = true
       resultRef.current = { msg: `Tie at ${p.rank}! Go to war or surrender.`, tone: 'info' }
-      sound.play('cashout')
+      casinoWarSounds.cashout()
       repaint()
     }
   }, [betRef, placeBet, draw, finish, payout, repaint])
@@ -238,7 +240,7 @@ export default function CasinoWarGame() {
     warPRef.current = wp
     warDRef.current = wd
     warGenRef.current += 1
-    sound.play('tick')
+    casinoWarSounds.tick()
     repaint()
 
     const bet = wagerRef.current
