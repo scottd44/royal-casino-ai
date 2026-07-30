@@ -280,6 +280,19 @@ body::after {
 
   .btn-sm { padding: 8px 14px; font-size: 13px; border-radius: 10px; }
 
+  /* Touch tap-target floor (WCAG 2.5.5 / iOS HIG: 44-48px). Every game's
+     buttons and BetField controls compose `.btn`, so this one rule lifts
+     every game to phone-safe tap targets without touching a single game
+     file or agent-contract id. */
+  @media (max-width: 768px) {
+    .btn { min-height: 48px; }
+    .btn-sm { min-height: 44px; }
+    input[type='range'].dice-slider,
+    input[type='range'] {
+      min-height: 28px;
+    }
+  }
+
   .btn-ghost {
     background: var(--glass);
     color: var(--color-text);

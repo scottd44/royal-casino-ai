@@ -8,6 +8,7 @@ import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { toast } from '@/platform/ui/toast'
 import { fmt } from '@/platform/money/format'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
    Keno — ported from js/games/keno.js.
@@ -140,6 +141,7 @@ function shuffledPool(): number[] {
 
 export default function KenoGame() {
   const betRef = useBetRef()
+  const isMobile = useIsMobile()
 
   const placeBet = useWalletStore((s) => s.placeBet)
   const payout = useWalletStore((s) => s.payout)
@@ -336,6 +338,7 @@ export default function KenoGame() {
             id="knBoard"
             tiles={TILE_NUMBERS}
             cols={8}
+            gapPx={isMobile ? 4 : 8}
             onTileClick={(i) => toggle(TILE_NUMBERS[i])}
             tileClassName={(n) => tileClasses(n)}
             renderTile={(n) => {
@@ -343,7 +346,7 @@ export default function KenoGame() {
               const isMiss = phase === 'over' && picks.has(n) && !drawn.includes(n)
               return (
                 <>
-                  <span className="text-[13px] font-semibold tabular-nums">{n}</span>
+                  <span className={`${isMobile ? 'text-[11px]' : 'text-[13px]'} font-semibold tabular-nums`}>{n}</span>
                   {/* A hit badge that genuinely mounts fresh the instant the
                       round resolves (per TileGrid.tsx's own rule: the
                       button never unmounts, so any pop-in animation has to

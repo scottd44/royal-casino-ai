@@ -7,6 +7,7 @@ import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money } from '@/platform/money/format'
 import { toast } from '@/platform/ui/toast'
 import { SYMBOLS, GemArt, type GemSymbolKey } from './Symbols'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
    Cosmic Gems — ported from js/games/gems.js. A 3x3, 5-payline gem slot:
@@ -86,6 +87,8 @@ type SpinRecord = { id: number; win: number }
 
 export default function GemsGame() {
   const betRef = useBetRef()
+  const isMobile = useIsMobile()
+  const gemArtSize = isMobile ? 34 : 44
   const spinningRef = useRef(false)
   const lockedRef = useRef<Set<number>>(new Set())
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -247,7 +250,7 @@ export default function GemsGame() {
               className="relative rounded-xl p-3"
               style={{
                 width: '100%',
-                maxWidth: 210,
+                maxWidth: isMobile ? 260 : 210,
                 margin: '0 auto',
                 background: 'radial-gradient(ellipse at 50% 20%, rgba(140,110,255,0.10), rgba(0,0,0,0.6) 75%)',
                 boxShadow: 'inset 0 8px 20px rgba(0,0,0,0.8), inset 0 -6px 16px rgba(0,0,0,0.6)',
@@ -270,7 +273,7 @@ export default function GemsGame() {
                         transition: 'box-shadow 0.3s var(--ease), border-color 0.3s var(--ease)',
                       }}
                     >
-                      <GemArt sym={sym} size={44} glow={isWin} />
+                      <GemArt sym={sym} size={gemArtSize} glow={isWin} />
                     </div>
                   )
                 })}
