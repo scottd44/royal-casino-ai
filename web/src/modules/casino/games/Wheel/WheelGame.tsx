@@ -6,6 +6,7 @@ import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money } from '@/platform/money/format'
 import { toast } from '@/platform/ui/toast'
+import { sound } from '@/platform/audio/soundStore'
 
 /* ============================================================
    Wheel — ported from js/games/wheel.js. Pick a risk level and spin. Every
@@ -223,12 +224,14 @@ export default function WheelGame() {
   const betAmountRef = useRef(0)
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const tickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const historyIdRef = useRef(0)
 
   useEffect(
     () => () => {
       if (settleTimerRef.current !== null) clearTimeout(settleTimerRef.current)
       if (flashTimerRef.current !== null) clearTimeout(flashTimerRef.current)
+      if (tickTimerRef.current !== null) clearTimeout(tickTimerRef.current)
     },
     [],
   )
@@ -272,6 +275,22 @@ export default function WheelGame() {
     // Track A: truth resolves on a plain wall-clock timer, never on the CSS
     // transition's own completion — see the file header.
     settleTimerRef.current = setTimeout(() => settle(idx), SETTLE_DELAY_MS)
+
+    // Ticks thin out as the wheel slows, decelerating the audio with the rim
+    // (wheel.js:213-223, ported verbatim).
+    if (tickTimerRef.current !== null) clearTimeout(tickTimerRef.current)
+    let tickGap = 90
+    const scheduleTick = () => {
+      tickTimerRef.current = setTimeout(() => {
+        sound.play('tick')
+        tickGap = Math.min(340, tickGap * 1.14)
+        scheduleTick()
+      }, tickGap)
+    }
+    scheduleTick()
+    setTimeout(() => {
+      if (tickTimerRef.current !== null) clearTimeout(tickTimerRef.current)
+    }, SETTLE_DELAY_MS)
   }
 
   function settle(idx: number) {
@@ -290,6 +309,7 @@ export default function WheelGame() {
       historyIdRef.current += 1
       setHistory((h) => [...h.slice(-13), { id: historyIdRef.current, mult: 0 }])
       setLastSpinLabel('bust')
+      sound.play('lose')
       toast(`Busted — lost ${money(betAmountRef.current)}.`, 'lose')
       setActive(false)
       setMult(0)
@@ -306,12 +326,14 @@ export default function WheelGame() {
     historyIdRef.current += 1
     setHistory((h) => [...h.slice(-13), { id: historyIdRef.current, mult: seg.mult }])
     setLastSpinLabel('×' + seg.mult)
+    sound.play(seg.mult >= 5 ? 'bigwin' : 'win')
   }
 
   function cashOut() {
     if (!active || spinning || mult <= 0) return
     const winnings = Math.floor(betAmountRef.current * mult * HOUSE_EDGE)
     payout(winnings)
+    sound.play(mult >= 5 ? 'bigwin' : 'cashout')
     toast(`Cashed out ${mult.toFixed(2)}× — +${fmt(winnings - betAmountRef.current)} profit!`, 'win')
     setActive(false)
     setMult(0)

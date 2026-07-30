@@ -6,6 +6,7 @@ import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt } from '@/platform/money/format'
 import { toast } from '@/platform/ui/toast'
 import type { ToastType } from '@/platform/ui/toast'
+import { sound } from '@/platform/audio/soundStore'
 import { Card } from '../../components/Card'
 import type { CardSuit } from '../../components/Card'
 import { Felt } from '../../components/Felt'
@@ -123,11 +124,14 @@ export default function BlackjackGame() {
         finalTone = 'info'
         finalWin = wagerRef.current
         finalMsg = 'Lucky break — your stake is refunded.'
+        sound.play('cashout')
       }
       inRoundRef.current = false
       hideHoleRef.current = false
       resultRef.current = { msg: finalMsg, tone: finalTone }
       if (finalWin > 0) payout(finalWin)
+      if (finalTone === 'win') sound.play('win')
+      else if (finalTone === 'lose') sound.play('lose')
       toast(finalMsg, finalTone)
       repaint()
     },

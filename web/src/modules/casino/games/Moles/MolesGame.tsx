@@ -7,6 +7,7 @@ import BetField, { useBetRef, readBet } from '../../components/BetField'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money, randInt } from '@/platform/money/format'
+import { sound } from '@/platform/audio/soundStore'
 
 /* ============================================================
    Moles — ported from js/games/moles.js. Whack-a-mole push-your-luck,
@@ -203,6 +204,7 @@ export default function MolesGame() {
         }.`,
       )
       setMsgTone(net >= 0 ? 'win' : 'lose')
+      sound.play(net >= stakeRef.current * 3 ? 'bigwin' : 'cashout')
     },
     [payout],
   )
@@ -227,6 +229,7 @@ export default function MolesGame() {
         foundRef.current++
         setHoles((h) => h.map((v, k) => (k === i ? 'mole' : v)))
         setFound(foundRef.current)
+        sound.play('win')
         if (foundRef.current >= molesRef.current) {
           cashOut(true)
           return
@@ -240,6 +243,7 @@ export default function MolesGame() {
         revealAll()
         setMsg(`Empty hole — busted! Lost ${money(stakeRef.current)}.`)
         setMsgTone('lose')
+        sound.play('lose')
       }
     },
     [cashOut],
@@ -280,6 +284,7 @@ export default function MolesGame() {
     setPhase('playing')
     setMsg('Whack a hole!')
     setMsgTone('live')
+    sound.play('tick')
   }, [placeBet])
 
   /* ---------------- window.MolesAPI ----------------

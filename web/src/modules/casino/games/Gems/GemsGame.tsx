@@ -8,6 +8,7 @@ import { fmt, money } from '@/platform/money/format'
 import { toast } from '@/platform/ui/toast'
 import { SYMBOLS, GemArt, type GemSymbolKey } from './Symbols'
 import { useIsMobile } from '@/platform/layout/useMediaQuery'
+import { sound } from '@/platform/audio/soundStore'
 
 /* ============================================================
    Cosmic Gems — ported from js/games/gems.js. A 3x3, 5-payline gem slot:
@@ -126,6 +127,7 @@ export default function GemsGame() {
       setWinCells(r.winCells)
       setHitLines(r.hit)
       const big = r.win >= stake * 15
+      sound.play(big ? 'bigwin' : 'win')
       toast(`${r.hit.length} line win — +${money(r.win)}!`, 'win')
       setResultMsg(`${r.hit.length} line${r.hit.length > 1 ? 's' : ''} · +${fmt(r.win)}${big ? ' — BIG WIN' : ''}`)
       setResultTone('win')
@@ -135,6 +137,7 @@ export default function GemsGame() {
         setBestWin(fmt(r.win))
       }
     } else {
+      sound.play('lose')
       setWinCells(null)
       setHitLines([])
       setResultMsg('No lines — spin again!')
@@ -196,6 +199,7 @@ export default function GemsGame() {
           })
           return next
         })
+        sound.play('tick')
         if (col === 2) {
           if (scrambleRef.current) clearInterval(scrambleRef.current)
           finish(g, stake)

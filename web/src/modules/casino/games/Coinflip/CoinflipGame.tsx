@@ -8,6 +8,7 @@ import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money } from '@/platform/money/format'
 import { useIsMobile } from '@/platform/layout/useMediaQuery'
+import { sound } from '@/platform/audio/soundStore'
 
 /* ============================================================
    Coinflip — ported from js/games/coinflip.js.
@@ -131,9 +132,11 @@ export default function CoinflipGame() {
         multRef.current *= payoutFor(n)
         msgRef.current = `${n > 1 ? `All ${n} match` : 'Correct'}! Streak ${streakRef.current} · ${multRef.current.toFixed(2)}×.`
         toneRef.current = 'win'
+        sound.play(multRef.current >= 8 ? 'bigwin' : 'win')
       } else {
         msgRef.current = `Wrong! Streak over — lost ${money(stakeRef.current)}. Pick a side to play again.`
         toneRef.current = 'lose'
+        sound.play('lose')
         endRound()
       }
       repaint()
@@ -147,6 +150,7 @@ export default function CoinflipGame() {
     payout(ret)
     msgRef.current = `Cashed out ${multRef.current.toFixed(2)}× = ${money(ret)} (+${fmt(ret - stakeRef.current)}). Pick a side to go again.`
     toneRef.current = 'win'
+    sound.play('cashout')
     endRound()
     repaint()
   }, [endRound, payout, repaint])

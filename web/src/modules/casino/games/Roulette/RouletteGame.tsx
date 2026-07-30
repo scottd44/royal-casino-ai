@@ -7,6 +7,7 @@ import { fmt } from '@/platform/money/format'
 import { toast } from '@/platform/ui/toast'
 import AgentMount from '../../components/AgentMount'
 import { useIsMobile } from '@/platform/layout/useMediaQuery'
+import { sound } from '@/platform/audio/soundStore'
 
 /* ============================================================
    European Roulette — ported from js/games/roulette.js. Single-zero wheel,
@@ -244,8 +245,10 @@ export default function RouletteGame(): JSX.Element {
 
       if (returned > 0) {
         payout(returned)
+        sound.play(returned - staked >= staked * 10 ? 'bigwin' : 'win')
         toast(`${n} ${colorOf(n)} — you won +${fmt(returned - staked)}!`, 'win')
       } else {
+        sound.play('lose')
         toast(`${n} ${colorOf(n)} — no winning bets.`, 'lose')
       }
       setHistory((h) => [...h.slice(-11), n])

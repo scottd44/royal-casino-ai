@@ -7,6 +7,7 @@ import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { money } from '@/platform/money/format'
 import { toast } from '@/platform/ui/toast'
 import { useIsMobile } from '@/platform/layout/useMediaQuery'
+import { sound } from '@/platform/audio/soundStore'
 
 /* ============================================================
    Crash — ported from js/games/crash.js. The multiplier climbs from 1.00×;
@@ -331,6 +332,7 @@ export default function CrashGame() {
     const stake = lastStakeRef.current
     const win = Math.floor(stake * atMult)
     payout(win)
+    sound.play(atMult >= 5 ? 'bigwin' : 'cashout')
     toast(`Cashed out at ${atMult.toFixed(2)}× for ${money(win)}!`, 'win')
     setResultMsg(`Cashed out @ ${atMult.toFixed(2)}× — +${money(win - stake)}`)
     setResultTone('green')
@@ -361,6 +363,7 @@ export default function CrashGame() {
 
     if (!cashedOutRef.current) {
       const stake = lastStakeRef.current
+      sound.play('lose')
       setResultMsg(`Crashed @ ${cp.toFixed(2)}× — lost ${money(stake)}`)
       setResultTone('red')
       toast(`Crashed at ${cp.toFixed(2)}× — bet lost.`, 'lose')

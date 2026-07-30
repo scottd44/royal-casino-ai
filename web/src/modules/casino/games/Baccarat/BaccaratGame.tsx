@@ -5,6 +5,7 @@ import { useIsMobile } from '@/platform/layout/useMediaQuery'
 import { Reveal } from '@/platform/motion'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt } from '@/platform/money/format'
+import { sound } from '@/platform/audio/soundStore'
 import { toast } from '@/platform/ui/toast'
 import type { ToastType } from '@/platform/ui/toast'
 import { Card } from '../../components/Card'
@@ -188,11 +189,14 @@ export default function BaccaratGame(): JSX.Element {
       if (net > 0) {
         setResult({ msg: `${label} — +${fmt(net)}!`, tone: 'win' })
         toast(`${label} — won +${fmt(net)}!`, 'win')
+        sound.play(roundSide === 'tie' ? 'bigwin' : 'win')
       } else if (net === 0) {
         setResult({ msg: `${label} — push, bet returned.`, tone: 'info' })
+        sound.play('cashout')
       } else {
         setResult({ msg: `${label}. You lose.`, tone: 'lose' })
         toast(`${label} — no win.`, 'lose')
+        sound.play('lose')
       }
       setDealing(false)
     },
@@ -245,6 +249,7 @@ export default function BaccaratGame(): JSX.Element {
       const [who, card] = seq[i]
       if (who === 'P') setShownP((s) => [...s, card])
       else setShownB((s) => [...s, card])
+      sound.play('tick')
       i++
       revealTimer.current = setTimeout(step, 340)
     }

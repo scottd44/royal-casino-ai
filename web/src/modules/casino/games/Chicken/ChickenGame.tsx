@@ -8,6 +8,7 @@ import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money } from '@/platform/money/format'
 import { useIsMobile } from '@/platform/layout/useMediaQuery'
+import { sound } from '@/platform/audio/soundStore'
 
 /* ============================================================
    Chicken Road — ported from js/games/chicken.js. Cross the road one lane
@@ -277,6 +278,7 @@ export default function ChickenGame() {
     }
 
     if (safe) {
+      sound.play('tick')
       // TRACK A: truth lands on a plain setTimeout, never on the hop
       // animation's completion — see the file header.
       window.setTimeout(() => {
@@ -301,6 +303,7 @@ export default function ChickenGame() {
           })
         }
         setCrashedLane(nextIndex)
+        sound.play('lose')
         endLoss(nextIndex)
       }, 320)
     }
@@ -318,6 +321,7 @@ export default function ChickenGame() {
   function payAndEnd(mult: number, reachedEnd: boolean) {
     const winnings = Math.floor(stakeRef.current * mult)
     payout(winnings)
+    sound.play(mult >= 5 ? 'bigwin' : 'cashout')
     activeRef.current = false
     busyRef.current = false
     setActive(false)

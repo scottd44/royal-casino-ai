@@ -8,6 +8,7 @@ import { fmt, money } from '@/platform/money/format'
 import { toast } from '@/platform/ui/toast'
 import { SYMBOLS, SymbolArt, type SlotSymbol } from './Symbols'
 import { useIsMobile } from '@/platform/layout/useMediaQuery'
+import { sound } from '@/platform/audio/soundStore'
 
 /* ============================================================
    Slots ("Lucky Sevens Slots") — ported from js/games/slots.js. 3 reels,
@@ -131,6 +132,7 @@ export default function SlotsGame() {
     const result = evaluate(finals, stake)
     if (result.win > 0) {
       payout(result.win)
+      sound.play(result.mult >= 18 ? 'bigwin' : 'win')
       toast(`${result.label} — won ${money(result.win)}!`, 'win')
       setResultMsg(`${result.label} — +${fmt(result.win)}`)
       setResultTone('win')
@@ -141,6 +143,7 @@ export default function SlotsGame() {
         setBestWin(fmt(result.win))
       }
     } else {
+      sound.play('lose')
       setResultMsg('No win — spin again!')
       setResultTone('lose')
       setWinSymbols(null)
@@ -204,6 +207,7 @@ export default function SlotsGame() {
           next[i] = { ...next[i], settled: true }
           return next
         })
+        sound.play('tick')
         if (i === REEL_COUNT - 1) finish(finals, stake)
       }, delay),
     )

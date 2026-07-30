@@ -7,6 +7,7 @@ import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money, randInt, pick } from '@/platform/money/format'
 import { useIsMobile } from '@/platform/layout/useMediaQuery'
+import { sound } from '@/platform/audio/soundStore'
 
 /* ============================================================
    Tower — ported from js/games/tower.js.
@@ -167,6 +168,7 @@ export default function TowerGame() {
     activeRef.current = false
     setActive(false)
     for (let i = r; i < ROWS; i++) revealRow(i, i === r ? hitCol : undefined)
+    sound.play('lose')
     setMsg(`Mine on row ${r + 1}! Lost ${money(stakeRef.current)}.`)
     setMsgTone('lose')
   }
@@ -178,6 +180,7 @@ export default function TowerGame() {
     payout(winnings)
     activeRef.current = false
     setActive(false)
+    sound.play('bigwin')
     setMsg(`Reached the top! ${mult.toFixed(2)}× — +${fmt(winnings - stakeRef.current)}!`)
     setMsgTone('win')
   }
@@ -207,6 +210,7 @@ export default function TowerGame() {
     // `r !== clearedRef.current` guard above (same trick Mines' own
     // `revealedRef` mutation relies on).
     revealRow(r, c)
+    sound.play('tick')
     clearedRef.current += 1
     setCleared(clearedRef.current)
     if (clearedRef.current === ROWS) {
@@ -257,6 +261,7 @@ export default function TowerGame() {
     payout(winnings)
     activeRef.current = false
     setActive(false)
+    sound.play(mult >= 5 ? 'bigwin' : 'cashout')
     // Reveal remaining rows for closure — same as tower.js's cashOut().
     for (let i = clearedRef.current; i < ROWS; i++) revealRow(i, undefined)
     setMsg(`Cashed out ${mult.toFixed(2)}× — +${fmt(winnings - stakeRef.current)} profit!`)

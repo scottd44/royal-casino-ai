@@ -3,6 +3,7 @@ import { GameLayout, Panel, PageHead, Stat, Button } from '@/platform/ui'
 import { Reveal } from '@/platform/motion'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt } from '@/platform/money/format'
+import { sound } from '@/platform/audio/soundStore'
 import { toast } from '@/platform/ui/toast'
 import type { ToastType } from '@/platform/ui/toast'
 import { Card } from '../../components/Card'
@@ -210,6 +211,7 @@ export default function VideoPokerGame() {
         if (net > 0) {
           resultRef.current = { text: `${result.label}! +${fmt(net)}`, tone: 'win' }
           toast(`${result.label} — won +${fmt(net)}!`, 'win')
+          sound.play(result.pay >= 25 ? 'bigwin' : 'win')
         } else {
           resultRef.current = { text: `${result.label} — bet returned.`, tone: 'info' }
           toast(`${result.label} — push.`, 'info')
@@ -224,11 +226,13 @@ export default function VideoPokerGame() {
         resultRef.current = { text: 'Lucky refund — stake returned.', tone: 'info' }
         toast('Lucky refund — stake returned.', 'info')
         lastWinRef.current = '+' + fmt(stake)
+        sound.play('cashout')
       } else {
         highlightRef.current = null
         resultRef.current = { text: 'No win — deal again.', tone: 'lose' }
         toast('No paying hand.', 'lose')
         lastWinRef.current = '0'
+        sound.play('lose')
       }
 
       repaint()
@@ -288,6 +292,7 @@ export default function VideoPokerGame() {
       const stillDown = new Set(faceDownRef.current)
       stillDown.delete(idx)
       faceDownRef.current = stillDown
+      sound.play('tick')
       repaint()
       k++
       if (k >= toReplace.length) {

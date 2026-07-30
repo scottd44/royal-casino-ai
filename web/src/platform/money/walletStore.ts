@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 import { motion } from '@/platform/motion/motionStore'
+import { toast } from '@/platform/ui/toast/toastStore'
+import { money } from './format'
 
 /* ============================================================
    The wallet — the one global piece of state in Phase 0.
@@ -42,6 +44,10 @@ type WalletState = {
   /** Credit winnings / refunds / cash-outs. Non-positive amounts are ignored. */
   payout: (amount: number) => void
   setBalance: (amount: number) => void
+  /** Simulated top-up -- ported from js/core.js:92-96's addFunds(). Unlike
+   *  payout(), this never fires the win-celebration confetti (it isn't a
+   *  win) and always toasts. */
+  addFunds: (amount: number) => void
   setCheat: (on: boolean) => void
   reset: () => void
 }
@@ -83,6 +89,13 @@ export const useWalletStore = create<WalletState>()(
       },
 
       setBalance: (amount) => set({ balance: Math.max(0, Math.round(amount)) }),
+
+      addFunds: (amount) => {
+        const v = Math.round(Number(amount))
+        if (!Number.isFinite(v) || v <= 0) return
+        set((s) => ({ balance: s.balance + v }))
+        toast(`+${money(v)} added (simulated).`, 'info')
+      },
 
       setCheat: (on) => set({ cheatOn: !!on }),
 

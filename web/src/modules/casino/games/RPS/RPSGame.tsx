@@ -10,6 +10,7 @@ import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { money, fmt } from '@/platform/money/format'
 import { useIsMobile } from '@/platform/layout/useMediaQuery'
+import { sound } from '@/platform/audio/soundStore'
 
 /* ============================================================
    Rock Paper Scissors — ported from js/games/rps.js.
@@ -161,6 +162,7 @@ export default function RPSGame() {
 
       if (res === 0) {
         setMsg(`Tie on ${MOVES[p]} — throw again (streak safe).`, 'gold')
+        sound.play('tick')
       } else if (res > 0) {
         streakRef.current++
         multRef.current *= WIN
@@ -168,8 +170,10 @@ export default function RPSGame() {
           `You win! ${MOVES[p]} beats ${MOVES[h]} · streak ${streakRef.current} · ${multRef.current.toFixed(2)}×.`,
           'green',
         )
+        sound.play(multRef.current >= 8 ? 'bigwin' : 'win')
       } else {
         setMsg(`House wins with ${MOVES[h]}. Streak over — lost ${money(stakeRef.current)}. Throw again to play.`, 'red')
+        sound.play('lose')
         endRound()
       }
       repaint()
@@ -185,6 +189,7 @@ export default function RPSGame() {
       `Cashed out ${multRef.current.toFixed(2)}× = ${money(ret)} (+${fmt(ret - stakeRef.current)}). Throw again to play.`,
       'green',
     )
+    sound.play('cashout')
     endRound()
     repaint()
   }, [endRound, payout, repaint, setMsg])

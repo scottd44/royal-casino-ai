@@ -7,6 +7,7 @@ import BetField, { useBetRef, readBet } from '../../components/BetField'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money } from '@/platform/money/format'
+import { sound } from '@/platform/audio/soundStore'
 
 /* ============================================================
    Battleship — ported from js/games/battleship.js.
@@ -315,7 +316,7 @@ export default function BattleshipGame() {
         setStatus(`No hits — lost ${money(bet)}.`, 'lose')
       }
       log(`Cashed out ${mult.toFixed(2)}× = ${money(ret)} (net ${net >= 0 ? '+' : ''}${fmt(net)}).`)
-      void auto // parity with battleship.js's own `auto` param (it only gates a sound cue we don't have here)
+      if (!auto) sound.play(net > 0 ? 'win' : 'lose')
       nonceRef.current++
       repaint()
     },
@@ -342,14 +343,17 @@ export default function BattleshipGame() {
           multRef.current += ship.sink
           ship.cells.forEach(([rr, cc]) => (shots[rr][cc] = 3))
           log(`Sank the ${ship.name}! +${ship.sink}× (${COLS[c]}${r + 1})`)
+          sound.play('cashout')
           if (sunkCountRef.current === FLEET.length) {
             multRef.current += GRAND
             log(`WHOLE FLEET SUNK! +${GRAND}× GRAND JACKPOT!`)
+            sound.play('bigwin')
             cashOut(true) // banks the jackpot immediately, same as battleship.js:322
             return
           }
         } else {
           log(`Hit at ${COLS[c]}${r + 1} +${BASE}×`)
+          sound.play('tick')
         }
       } else {
         shots[r][c] = 1
@@ -394,6 +398,7 @@ export default function BattleshipGame() {
 
     setStatus(`Fire! ${SHOTS} shots loaded — hit pieces, sink ships.`, 'live')
     log(`Bet ${money(bet)} — ${SHOTS} shots loaded. Round #${nonceRef.current}.`)
+    sound.play('tick')
     repaint()
     // betRef is a stable ref object — deliberately excluded from deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -409,6 +414,7 @@ export default function BattleshipGame() {
     }
     shotsLeftRef.current++
     log(`Bought a shot for ${money(price)}.`)
+    sound.play('tick')
     setStatus('Extra shot loaded — make it count.', 'live')
     repaint()
   }, [log, placeBet, priceNow, repaint, setStatus])

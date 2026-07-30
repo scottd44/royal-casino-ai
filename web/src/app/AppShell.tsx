@@ -9,6 +9,8 @@ import { LabHud } from '@/modules/casino/lab/LabHud'
 import { LabReportModal } from '@/modules/casino/lab/LabReportModal'
 import { useLabUiStore } from '@/modules/casino/lab/labUiStore'
 import { useIsMobile } from '@/platform/layout/useMediaQuery'
+import { sound, useSoundStore } from '@/platform/audio/soundStore'
+import { useGlobalClickSound } from '@/platform/audio/useGlobalClickSound'
 // LabDrawer/LabHud below are now the always-mounted component that keeps
 // `royalAgent` (platform/agent/agentUi.ts) alive — it's constructed at
 // module-eval time, not on first render, so importing it transitively
@@ -43,6 +45,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
   // so `collapsed` only matters on desktop.
   const collapsed = userCollapsed
   const balance = useWalletStore((s) => s.balance)
+  const addFunds = useWalletStore((s) => s.addFunds)
+  const muted = useSoundStore((s) => s.muted)
+  useGlobalClickSound()
 
   // No boot effect needed anymore (plan §6) — `royalAgent` is a real ES
   // module import (platform/agent/agentUi.ts); useAgentStore wires
@@ -64,19 +69,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
       style={{
         gridTemplateColumns: isMobile ? '1fr' : `${collapsed ? 'var(--sbw-min)' : 'var(--sbw)'} 1fr`,
         transition: 'grid-template-columns 0.28s var(--ease)',
-        // iOS "Add to Home Screen" runs the app in standalone mode with no
-        // Safari chrome, so the notch/status-bar area that a normal mobile
-        // browser tab reserves for itself becomes part of our own viewport
-        // instead — without this, the topbar (and its hamburger button)
-        // render UNDER the notch and are visually clipped AND untouchable,
-        // since iOS doesn't deliver taps through the notch cutout. `env()`
-        // resolves to 0 on every non-notch device/browser tab, so this is a
-        // no-op everywhere else. `viewport-fit=cover` in index.html is what
-        // makes these env() values non-zero in the first place.
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingLeft: 'env(safe-area-inset-left)',
-        paddingRight: 'env(safe-area-inset-right)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
       <Sidebar
@@ -108,15 +100,29 @@ export default function AppShell({ children }: { children: ReactNode }) {
         style={{ paddingBottom: labPaddingBottom, transition: 'padding-bottom 0.2s var(--ease)' }}
       >
         <header
-          className="topbar sticky top-0 z-10 flex items-center gap-3 px-5 border-b"
+          className="topbar sticky top-0 z-10 border-b"
           style={{
-            height: 'var(--topbar-h)',
             borderColor: 'var(--glass-line)',
             background: 'var(--glass-panel)',
             backdropFilter: 'var(--glass-blur)',
             WebkitBackdropFilter: 'var(--glass-blur)',
+            // iOS "Add to Home Screen" runs the app in standalone mode with
+            // no Safari chrome, so the notch/status-bar area a normal
+            // browser tab reserves for itself becomes part of our own
+            // viewport instead. Padding the OUTER shell for this (an
+            // earlier attempt) left an unpainted band of plain page
+            // background above the topbar — wrong color, and the
+            // hamburger sitting right at that seam was only partially
+            // tappable. Padding the header ITSELF instead means its own
+            // glass background/blur extends all the way up through the
+            // notch, with the actual button row (below) pushed down
+            // beneath it — one continuous surface, no seam. `env()`
+            // resolves to 0 on every non-notch device/browser tab, so
+            // this is a no-op everywhere else.
+            paddingTop: 'env(safe-area-inset-top)',
           }}
         >
+          <div className="flex items-center gap-3 px-5" style={{ height: 'var(--topbar-h)' }}>
           <button
             type="button"
             id="sbCollapse"
@@ -131,12 +137,56 @@ export default function AppShell({ children }: { children: ReactNode }) {
                It must exist and stay mounted for the whole run. */}
           <div id="aiStatus" className="flex-1 min-w-0 truncate text-sm text-muted" />
 
+          {/* Sound mute toggle -- ported from js/app.js's #muteBtn. Gives
+              immediate audible feedback on unmute, same as legacy. */}
+          <button
+            type="button"
+            id="muteBtn"
+            aria-label={muted ? 'Sound off — click to unmute' : 'Sound on — click to mute'}
+            title={muted ? 'Sound off — click to unmute' : 'Sound on — click to mute'}
+            onClick={() => {
+              sound.toggleMute()
+              if (!useSoundStore.getState().muted) sound.play('click')
+            }}
+            className="shrink-0 rounded-[10px] p-2 text-muted transition-colors hover:bg-white/5 hover:text-text"
+          >
+            <Icon name={muted ? 'volume-x' : 'volume-2'} size={18} />
+          </button>
+
           <div className="num text-gold text-sm shrink-0" title="Balance">
             {money(balance)}
           </div>
+
+          {/* Simulated top-up -- ported from js/app.js's #addFundsBtn
+              (Casino.addFunds(500)). Play-money only; on both web and mobile,
+              unlike the AI Lab entry points which are desktop-only. */}
+          <button
+            type="button"
+            id="addFundsBtn"
+            onClick={() => addFunds(500)}
+            title="Add $500 simulated cash"
+            className="shrink-0 inline-flex items-center gap-1 rounded-[10px] border px-2.5 py-1.5 text-xs font-semibold text-gold transition-colors hover:bg-white/5"
+            style={{ borderColor: 'color-mix(in srgb, var(--color-gold) 35%, var(--glass-line))' }}
+          >
+            <Icon name="circle-dollar-sign" size={14} />
+            {!isMobile && '+ Cash'}
+          </button>
+          </div>
         </header>
 
-        <div className="app-content px-5 py-6">{children}</div>
+        <div
+          className="app-content px-5 py-6"
+          style={{
+            // Same reasoning as the topbar's paddingTop above, mirrored for
+            // the home-indicator area: added directly to the content that
+            // already scrolls inside .app-main's own background, instead of
+            // padding the outer shell (which left a separate, mismatched
+            // band below everything, reading as a "cut off" seam).
+            paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))',
+          }}
+        >
+          {children}
+        </div>
       </main>
 
       {/* Fixed-position siblings of <main>, OUTSIDE .app-main's scroll

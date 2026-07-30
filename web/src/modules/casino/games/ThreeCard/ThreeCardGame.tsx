@@ -11,6 +11,7 @@ import type { CardSuit } from '../../components/Card'
 import { Felt } from '../../components/Felt'
 import BetField, { useBetRef, readBet } from '../../components/BetField'
 import AgentMount from '../../components/AgentMount'
+import { sound } from '@/platform/audio/soundStore'
 
 /* ============================================================
    Three Card Poker — ported from js/games/threecard.js. Ante up, see your
@@ -260,6 +261,7 @@ export default function ThreeCardGame() {
     revealDealerRef.current = false
     resultRef.current = { text: 'Play (match your ante) or Fold?', tone: 'info' }
     setControlsDisabled(true)
+    sound.play('tick')
     repaint()
   }, [betRef, draw, placeBet, repaint, setControlsDisabled])
 
@@ -271,6 +273,7 @@ export default function ThreeCardGame() {
     const lost = anteRef.current + ppRef.current
     resultRef.current = { text: `Folded — lost ${money(lost)}.`, tone: 'lose' }
     lastNetRef.current = -lost
+    sound.play('lose')
     repaint()
   }, [repaint, setControlsDisabled])
 
@@ -297,13 +300,16 @@ export default function ThreeCardGame() {
     if (net > 0) {
       text = `${r.label}${extra} — +${fmt(net)}!`
       tone = 'win'
+      sound.play(net >= ante * 6 ? 'bigwin' : 'win')
       toast(`Won +${fmt(net)}!`, 'win')
     } else if (net === 0) {
       text = `${r.label}${extra} — even.`
       tone = 'info'
+      sound.play('cashout')
     } else {
       text = `${r.label}${extra}. Lost ${money(-net)}.`
       tone = 'lose'
+      sound.play('lose')
     }
     resultRef.current = { text, tone }
     lastNetRef.current = net

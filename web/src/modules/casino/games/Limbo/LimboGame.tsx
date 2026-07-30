@@ -7,6 +7,7 @@ import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt } from '@/platform/money/format'
 import { useIsMobile } from '@/platform/layout/useMediaQuery'
+import { sound } from '@/platform/audio/soundStore'
 
 /* ============================================================
    Limbo — ported from js/games/limbo.js.
@@ -195,6 +196,7 @@ export default function LimboGame() {
       const shown = result * (ticks / STEPS)
       setDisplay(shown.toFixed(2) + '×')
       setShownNum(shown)
+      sound.play('tick')
       if (shown >= t) setCleared(true)
 
       if (ticks >= STEPS) {
@@ -207,8 +209,10 @@ export default function LimboGame() {
         if (won) {
           const winnings = Math.floor(stake * t)
           payout(winnings)
+          sound.play(t >= 10 ? 'bigwin' : 'win')
           setMsg(`${result.toFixed(2)}× ≥ ${t.toFixed(2)}× — won +${fmt(winnings - stake)}!`)
         } else {
+          sound.play('lose')
           setMsg(`${result.toFixed(2)}× fell short of ${t.toFixed(2)}×. You lose.`)
         }
 
