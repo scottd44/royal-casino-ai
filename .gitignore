@@ -8,3 +8,14 @@ Thumbs.db
 
 # logs from the local server / monitor
 *.log
+
+# React migration (web/)
+web/node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+web/.env.local
+
+# Playwright artifacts (root, from a stray run)
+test-results/
+playwright-report/

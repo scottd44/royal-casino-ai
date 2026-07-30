@@ -1,0 +1,5 @@
+export { Icon, default } from './Icon'
+export type { IconProps } from './Icon'
+export { ICONS } from './registry'
+export type { IconName } from './registry'
+export { GAME_ICONS, SECTION_ICONS } from './gameIcons'

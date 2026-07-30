@@ -1,0 +1,324 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Design tokens — ported verbatim from css/styles.css :root.
+   Tailwind v4 is CSS-first: names declared in @theme become
+   utilities (--color-gold -> bg-gold / text-gold / border-gold).
+   ============================================================ */
+@theme {
+  /* surfaces — midnight charcoal/slate, one step apart each */
+  --color-bg-0: #05070c;
+  --color-bg-1: #090d14;
+  --color-bg-2: #0e131d;
+  --color-panel: #121824;
+  --color-panel-2: #182031;
+  --color-line: #232d40;
+  --color-line-soft: #19212f;
+
+  /* text */
+  --color-text: #eaf0fa;
+  --color-muted: #8792a8;
+  --color-faint: #58627a;
+
+  /* brand — gold is THE accent; the rest are semantic only */
+  --color-gold: #f0c24f;
+  --color-gold-2: #ffdc86;
+  --color-gold-deep: #ab7f16;
+  --color-green: #22e59a;
+  --color-red: #ff4d6d;
+  --color-blue: #4d8cff;
+  --color-purple: #a97bff;
+
+  /* glass — rgba whites/panel; declared as colors so bg-glass, border-glass-line work */
+  --color-glass: rgba(255, 255, 255, 0.045);
+  --color-glass-2: rgba(255, 255, 255, 0.075);
+  --color-glass-line: rgba(255, 255, 255, 0.1);
+  --color-glass-panel: rgba(19, 25, 38, 0.62);
+
+  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", SFMono-Regular, "Roboto Mono", Menlo,
+    Consolas, monospace;
+
+  --radius-card: 14px;
+  --radius-card-sm: 10px;
+  --radius-card-lg: 20px;
+  --radius-pill: 999px;
+
+  --ease-brand: cubic-bezier(0.22, 0.8, 0.28, 1);
+  --animate-aurora: aurora 34s ease-in-out infinite alternate;
+
+  /* elevation — three-layer lift, contact + ambient + inset highlight */
+  --shadow-lift-1: 0 1px 2px rgba(0, 0, 0, 0.35), 0 4px 6px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-lift-2: 0 2px 4px rgba(0, 0, 0, 0.35), 0 10px 20px rgba(0, 0, 0, 0.28),
+    0 24px 48px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --shadow-lift-3: 0 4px 8px rgba(0, 0, 0, 0.4), 0 16px 32px rgba(0, 0, 0, 0.34),
+    0 40px 80px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Non-utility tokens: glows, glass recipe, elevation, shell metrics. */
+:root {
+  --glow-gold: rgba(240, 194, 79, 0.45);
+  --glow-green: rgba(34, 229, 154, 0.45);
+  --glow-red: rgba(255, 77, 109, 0.42);
+
+  --glass: var(--color-glass);
+  --glass-2: var(--color-glass-2);
+  --glass-line: var(--color-glass-line);
+  --glass-panel: var(--color-glass-panel);
+  --glass-blur: blur(12px) saturate(150%);
+
+  --lift-1: var(--shadow-lift-1);
+  --lift-2: var(--shadow-lift-2);
+  --lift-3: var(--shadow-lift-3);
+
+  --ring: 0 0 0 2px rgba(240, 194, 79, 0.55);
+
+  --sbw: 246px;
+  --sbw-min: 74px;
+  --topbar-h: 64px;
+  --ease: cubic-bezier(0.22, 0.8, 0.28, 1);
+
+  /* motion — every action answers inside --dur-tap */
+  --dur-tap: 90ms;
+  --dur-ui: 180ms;
+  --dur-panel: 320ms;
+  --dur-reveal: 520ms;
+}
+
+/* ============================================================
+   Shell — the page does NOT scroll. .app-main is the only scroller.
+   DEVELOPMENT_GUIDE.md §3b: never make the sidebar position:sticky,
+   and never put overflow on html/body. That bug shipped three times.
+   ============================================================ */
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg-0);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Themed scrollbars — default browser scrollbars are white/grey and clash
+   with the dark palette on every scrollable surface (.app-main, sidebar nav,
+   the AI Lab drawer/log, modals). Firefox via scrollbar-color, WebKit via
+   ::-webkit-scrollbar; both keyed off existing tokens, no new colors. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-line);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--color-line) 70%, white 12%);
+}
+
+/* Glass only reads if something luminous sits behind it. Two fixed layers
+   do that work; both are position:fixed so they never reflow on scroll. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -25%;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(34% 40% at 20% 14%, rgba(139, 92, 246, 0.42), transparent 66%),
+    radial-gradient(30% 34% at 80% 8%, rgba(240, 194, 79, 0.3), transparent 66%),
+    radial-gradient(40% 44% at 66% 86%, rgba(16, 185, 129, 0.26), transparent 68%),
+    radial-gradient(34% 38% at 8% 74%, rgba(56, 120, 255, 0.34), transparent 66%),
+    radial-gradient(26% 30% at 46% 46%, rgba(236, 72, 153, 0.14), transparent 70%),
+    linear-gradient(180deg, #0d1320, #070a11 62%);
+  filter: blur(14px) saturate(135%);
+  animation: aurora 34s ease-in-out infinite alternate;
+}
+
+@keyframes aurora {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(2%, -2%, 0) scale(1.08); }
+  100% { transform: translate3d(-2%, 1.5%, 0) scale(1.03); }
+}
+
+/* Fine grain — inline SVG turbulence, no asset fetch. Kills gradient banding. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Every money / multiplier / telemetry figure lines up.
+   Mono is for numbers only, never prose. */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  text-shadow: 0 0 14px color-mix(in srgb, currentColor 28%, transparent);
+}
+
+.glass {
+  background: var(--glass-panel);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-line);
+  box-shadow: var(--lift-2);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: 8px;
+}
+
+/* ============================================================
+   Lobby ambience — the spotlight masthead's sheen sweep and the
+   "featured table" live dot.
+
+   These are CSS keyframes rather than framer-motion on purpose: the M1
+   motion policy keeps Framer for entrances (which are watchdogged) and
+   uses CSS for anything ambient and infinite, so a decorative loop can
+   never occupy a tween that stalls and leaves a node stuck mid-state.
+   The prefers-reduced-motion block below already neutralises both.
+   ============================================================ */
+@keyframes lobbySheen {
+  0% { transform: translate3d(-160%, 0, 0) skewX(-12deg); opacity: 0; }
+  14% { opacity: 1; }
+  56% { opacity: 0; }
+  100% { transform: translate3d(620%, 0, 0) skewX(-12deg); opacity: 0; }
+}
+
+@keyframes lobbyPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.78); }
+}
+
+/* The slow halo behind the masthead medallion — breathes, never spins. */
+@keyframes lobbyHalo {
+  0%, 100% { opacity: 0.55; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   Buttons — ported verbatim from css/styles.css .btn family (540-586).
+   platform/ui/Button.tsx composes these class names plus size utilities.
+   CSS-only interaction: the ::after sheen and :hover/:disabled states
+   can't be reproduced with Tailwind utilities alone, and per the M1
+   motion policy this is CSS transitions, never framer-motion — a
+   button is an input affordance and must never stall mid-tween.
+   ============================================================ */
+@layer components {
+  .btn {
+    font-weight: 700;
+    letter-spacing: 0.1px;
+    border: 0;
+    border-radius: 12px;
+    padding: 12px 22px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform var(--dur-tap) var(--ease), filter 0.15s ease, box-shadow 0.2s ease;
+    color: #1a1403;
+    background: linear-gradient(180deg, var(--color-gold-2), var(--color-gold));
+    box-shadow: 0 6px 18px rgba(240, 194, 79, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  /* Sheen sweep on hover — pure CSS, one paint layer. */
+  .btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.28) 50%, transparent 62%);
+    transform: translateX(-120%);
+    transition: transform 0.55s var(--ease);
+    pointer-events: none;
+  }
+  .btn:hover {
+    filter: brightness(1.07);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 26px rgba(240, 194, 79, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  .btn:hover::after { transform: translateX(120%); }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(0.5);
+    transform: none;
+    box-shadow: none;
+  }
+  .btn:disabled::after { display: none; }
+
+  .btn-sm { padding: 8px 14px; font-size: 13px; border-radius: 10px; }
+
+  .btn-ghost {
+    background: var(--glass);
+    color: var(--color-text);
+    border: 1px solid var(--color-line);
+    box-shadow: none;
+  }
+  .btn-ghost:hover {
+    background: var(--glass-2);
+    border-color: color-mix(in srgb, var(--color-gold) 40%, var(--color-line));
+    box-shadow: none;
+  }
+
+  .btn-green {
+    color: #04261a;
+    background: linear-gradient(180deg, #5cf3ba, var(--color-green));
+    box-shadow: 0 6px 18px rgba(34, 229, 154, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  .btn-green:hover { box-shadow: 0 10px 26px rgba(34, 229, 154, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+
+  .btn-red {
+    background: linear-gradient(180deg, #ff7d94, var(--color-red));
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(255, 77, 109, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+  .btn-red:hover { box-shadow: 0 10px 26px rgba(255, 77, 109, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+
+  .btn-blue {
+    background: linear-gradient(180deg, #79aaff, var(--color-blue));
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(77, 140, 255, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+  .btn-blue:hover { box-shadow: 0 10px 26px rgba(77, 140, 255, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+
+  .btn-purple {
+    background: linear-gradient(180deg, #bd9cff, #8b5cf6);
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(169, 123, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+  .btn-purple:hover { box-shadow: 0 10px 26px rgba(169, 123, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+
+  .btn-block { width: 100%; }
+}

@@ -1,0 +1,13 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+await page.goto('http://localhost:5173/#moles');
+await page.waitForSelector('#molStart');
+await page.click('#molStart');
+await page.waitForTimeout(300);
+const rect = await page.evaluate(() => document.getElementById('molGrid').getBoundingClientRect());
+console.log('molGrid rect BEFORE:', JSON.stringify(rect));
+const tileRect = await page.evaluate(() => document.querySelector('#molGrid [data-idx="0"]').getBoundingClientRect());
+console.log('tile[0] rect BEFORE:', JSON.stringify(tileRect));
+await page.screenshot({ path: '/tmp/moles_before.png' });
+await browser.close();
