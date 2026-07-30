@@ -9,6 +9,7 @@ import { LabHud } from '@/modules/casino/lab/LabHud'
 import { LabReportModal } from '@/modules/casino/lab/LabReportModal'
 import { useLabUiStore } from '@/modules/casino/lab/labUiStore'
 import { useIsMobile } from '@/platform/layout/useMediaQuery'
+import { useLayoutModeStore } from '@/platform/layout/layoutModeStore'
 // LabDrawer/LabHud below are now the always-mounted component that keeps
 // `royalAgent` (platform/agent/agentUi.ts) alive — it's constructed at
 // module-eval time, not on first render, so importing it transitively
@@ -41,6 +42,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
   // desktop collapsed state. Desktop keeps its own manual toggle.
   const collapsed = isMobile || userCollapsed
   const balance = useWalletStore((s) => s.balance)
+  const layoutMode = useLayoutModeStore((s) => s.mode)
+  const setLayoutMode = useLayoutModeStore((s) => s.setMode)
 
   // No boot effect needed anymore (plan §6) — `royalAgent` is a real ES
   // module import (platform/agent/agentUi.ts); useAgentStore wires
@@ -93,6 +96,22 @@ export default function AppShell({ children }: { children: ReactNode }) {
           {/*  #aiStatus is written directly by agent-ui.js setStatus().
                It must exist and stay mounted for the whole run. */}
           <div id="aiStatus" className="flex-1 min-w-0 truncate text-sm text-muted" />
+
+          {/* Debug-only: forces `useIsMobile()` to a fixed value so phone
+              layout can be previewed from a desktop browser without
+              resizing the window. Cycles auto -> mobile -> desktop -> auto.
+              Purely a dev affordance — carries no agent-contract id. */}
+          <button
+            type="button"
+            onClick={() =>
+              setLayoutMode(layoutMode === 'auto' ? 'mobile' : layoutMode === 'mobile' ? 'desktop' : 'auto')
+            }
+            title="Toggle phone-mode preview"
+            className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] text-xs font-semibold text-muted hover:text-text hover:bg-white/5 transition-colors"
+          >
+            <Icon name={layoutMode === 'mobile' ? 'smartphone' : 'monitor'} size={15} />
+            {layoutMode === 'auto' ? 'Auto' : layoutMode === 'mobile' ? 'Phone' : 'Desktop'}
+          </button>
 
           <div className="num text-gold text-sm shrink-0" title="Balance">
             {money(balance)}
