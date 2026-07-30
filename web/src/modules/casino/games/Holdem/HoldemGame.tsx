@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { GameLayout, Panel, PageHead, Button } from '../../components/Panel'
+import { GameLayout, Panel, PageHead, Button, Stat } from '@/platform/ui'
+import { Reveal } from '@/platform/motion'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { money } from '@/platform/money/format'
+import { Card } from '../../components/Card'
+import type { CardSuit } from '../../components/Card'
+import { Felt } from '../../components/Felt'
 import {
-  makeTable, equity, blindsFor, fmtCard, rankStr, isRed, SUITS,
-  type Table, type Action, type Card,
+  makeTable, equity, blindsFor, fmtCard, rankStr, handName, SUITS,
+  type Table, type Action, type Card as EngineCard,
 } from './holdemEngine'
 
 /* ============================================================
@@ -35,8 +39,8 @@ type Snapshot = {
   seated: boolean
   awaitingHuman: boolean
   handOver: boolean
-  community: Card[]
-  hole: Card[]
+  community: EngineCard[]
+  hole: EngineCard[]
   stacks: number[]
   pot: number
   toCall: number
@@ -298,51 +302,171 @@ export default function HoldemGame() {
   const legalNow = snap.awaitingHuman && tbl ? tbl.legal() : []
   const canRaise = legalNow.find((a) => a.type === 'raise')
 
+  // Chosen raise-to amount for the slider control below. Reset (adjusted
+  // during render, React's documented pattern for derived state) whenever a
+  // fresh raise opportunity appears — new min/max, e.g. a new betting round
+  // — so a stale value from a prior street never carries over.
+  const [raiseTo, setRaiseTo] = useState(0)
+  const raiseKey = canRaise ? `${canRaise.min}:${canRaise.max}` : ''
+  const [seenRaiseKey, setSeenRaiseKey] = useState('')
+  if (canRaise && raiseKey !== seenRaiseKey) {
+    setSeenRaiseKey(raiseKey)
+    setRaiseTo(canRaise.min!)
+  }
+  const raiseAmount = canRaise ? Math.max(canRaise.min!, Math.min(canRaise.max!, raiseTo)) : 0
+
+  const streetLabel =
+    snap.community.length === 0
+      ? 'Pre-flop'
+      : snap.community.length === 3
+        ? 'Flop'
+        : snap.community.length === 4
+          ? 'Turn'
+          : 'River'
+
+  const equityPct =
+    tbl && snap.awaitingHuman ? Math.round(equity(snap.hole, snap.community, Math.max(1, tbl.contenders().length - 1), 120) * 100) : null
+
   return (
     <div>
-      <PageHead title="Texas Hold'em" sub="No-limit poker against three bots." />
+      <PageHead title="Texas Hold'em" sub="No-limit poker against three bots." icon="diamond" />
 
       <GameLayout>
         <Panel>
-          <div className="flex items-center justify-between mb-4 text-sm">
-            <span className="text-muted">Pot</span>
-            <span className="num text-gold text-lg">{money(snap.pot)}</span>
-          </div>
-
-          <div className="flex gap-2 justify-center min-h-[92px] items-center mb-5">
-            {snap.community.length === 0 && (
-              <span className="text-faint text-sm">
-                {snap.seated ? 'Pre-flop' : 'Sit down to play.'}
-              </span>
-            )}
-            {snap.community.map((c, i) => (
-              <PlayingCard key={i} card={c} />
-            ))}
-          </div>
-
-          <div className="grid grid-cols-4 gap-2 mb-5">
-            {NAMES.map((n, i) => (
-              <div
-                key={n}
-                className="rounded-[10px] border px-2 py-2 text-center"
-                style={{
-                  borderColor: 'var(--glass-line)',
-                  background: 'var(--glass)',
-                  opacity: snap.folded[i] ? 0.4 : 1,
-                }}
-              >
-                <div className="text-xs text-muted truncate">{n}</div>
-                <div className="num text-sm text-text">{money(snap.stacks[i] ?? 0)}</div>
-                <div className="text-[11px] text-faint h-4">{snap.lastActions[i] ?? ''}</div>
+          <Felt className="relative">
+            {/* The felt oval — four seats arranged around a center well that
+                holds the pot and community cards. Seats are a persistent
+                mount (per-seat identity never changes across a session,
+                same as the original stack/name row), so they're plain
+                styled divs, never wrapped in Reveal. */}
+            <div className="relative mx-auto h-[330px] sm:h-[360px] max-w-[520px]">
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none px-2">
+                <div className="num text-gold text-xl" id="hcPot">
+                  {money(snap.pot)}
+                </div>
+                <div className="text-[11px] uppercase tracking-wide text-faint">
+                  {snap.seated ? streetLabel : 'Sit down to play'}
+                </div>
+                <div className="flex gap-2 justify-center min-h-[80px] items-center">
+                  {/* Each street's cards mount fresh — preflop -> flop adds 3,
+                      then turn/river add one apiece — and the whole array
+                      unmounts back to [] on the next hand. Genuine
+                      mount/unmount per card. */}
+                  {snap.community.map((c, i) => (
+                    <Reveal key={i} as="div" preset="scaleIn" duration={0.28}>
+                      <Card rank={rankStr(c.r)} suit={SUITS[c.s] as CardSuit} size="lg" />
+                    </Reveal>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
 
-          <div className="flex gap-2 justify-center min-h-[92px] items-center">
-            {snap.hole.map((c, i) => (
-              <PlayingCard key={i} card={c} />
-            ))}
-          </div>
+              {NAMES.map((n, i) => {
+                const pos = SEAT_POS[i]
+                const p = tbl?.T.players[i]
+                const isTurn = !!tbl && !tbl.T.handOver && tbl.T.actionOn === i
+                const isButton = tbl?.button === i
+                const isFolded = snap.folded[i]
+                const betAmt = p?.betRound ?? 0
+                return (
+                  <div
+                    key={n}
+                    className="absolute"
+                    style={{ top: pos.top, left: pos.left, transform: 'translate(-50%, -50%)' }}
+                  >
+                    <div
+                      className="relative rounded-2xl border px-3 py-2 text-center transition-opacity duration-300"
+                      style={{
+                        minWidth: 92,
+                        borderColor: isTurn ? 'var(--color-gold)' : 'var(--glass-line)',
+                        background: 'var(--glass)',
+                        opacity: isFolded ? 0.4 : 1,
+                        boxShadow: isTurn
+                          ? '0 0 0 3px color-mix(in srgb, var(--color-gold) 35%, transparent), var(--lift-1)'
+                          : 'var(--lift-1)',
+                      }}
+                    >
+                      {isButton && (
+                        <span
+                          className="num absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full text-[10px]"
+                          style={{ background: 'var(--color-gold)', color: '#1a1305' }}
+                        >
+                          D
+                        </span>
+                      )}
+                      <div className="text-xs text-muted truncate">{n}</div>
+                      <div className="num text-sm text-text">{money(snap.stacks[i] ?? 0)}</div>
+                      <div
+                        className="text-[11px] h-4"
+                        style={{ color: isFolded ? 'var(--color-faint)' : 'var(--color-gold-2)' }}
+                      >
+                        {snap.lastActions[i] ?? ''}
+                      </div>
+                      {betAmt > 0 && !isFolded && (
+                        <Reveal
+                          key={`${i}-${betAmt}-${snap.lastActions[i]}`}
+                          as="div"
+                          preset="scaleIn"
+                          duration={0.2}
+                        >
+                          <div
+                            className="num mt-1 inline-block rounded-full px-1.5 py-0.5 text-[10px]"
+                            style={{
+                              background: 'color-mix(in srgb, var(--color-gold) 22%, transparent)',
+                              color: 'var(--color-gold-2)',
+                            }}
+                          >
+                            {money(betAmt)}
+                          </div>
+                        </Reveal>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="mt-8 flex flex-col items-center gap-1.5">
+              <div className="text-[11px] uppercase tracking-wide text-muted">Your hand</div>
+              <div className="flex gap-2 justify-center min-h-[92px] items-center">
+                {/* Dealt fresh at the top of each hand, unmounted (snap.hole ->
+                    []) the moment the table resets — same genuine
+                    mount/unmount case as the community cards above. */}
+                {snap.hole.map((c, i) => (
+                  <Reveal key={i} as="div" preset="scaleIn" duration={0.28}>
+                    <Card rank={rankStr(c.r)} suit={SUITS[c.s] as CardSuit} size="lg" />
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+
+            {/* Showdown reveal — every contender who saw the river shows
+                their hand, matching a real table's "cards up" moment. Purely
+                decorative (state() feeds the agent hole/board directly, not
+                this DOM), so it's safe to add without touching the API. */}
+            {tbl && tbl.T.handOver && tbl.T.result?.showdown && (
+              <div className="mt-4 flex flex-wrap justify-center gap-4 border-t pt-4" style={{ borderColor: 'var(--glass-line)' }}>
+                {tbl.T.players.map((p, i) => {
+                  if (p.folded || !p.alive || p.hole.length < 2) return null
+                  const score = tbl.T.result!.scores[i]
+                  return (
+                    <Reveal key={i} as="div" preset="fadeUp" duration={0.3}>
+                      <div className="text-center">
+                        <div className="text-xs text-muted mb-1">
+                          {NAMES[i]}
+                          {score ? ` — ${handName(score)}` : ''}
+                        </div>
+                        <div className="flex gap-1 justify-center">
+                          {p.hole.map((c, ci) => (
+                            <Card key={ci} rank={rankStr(c.r)} suit={SUITS[c.s] as CardSuit} size="lg" />
+                          ))}
+                        </div>
+                      </div>
+                    </Reveal>
+                  )
+                })}
+              </div>
+            )}
+          </Felt>
         </Panel>
 
         {/* The controls panel. #hcControls is half of holdem's detect(). */}
@@ -351,66 +475,132 @@ export default function HoldemGame() {
             {!snap.seated ? (
               <Button
                 id="hcSit"
+                variant="gold"
+                size="lg"
+                block
                 onClick={sit}
                 disabled={balance < MIN_BUYIN}
-                className="w-full text-bg-0 font-semibold py-3"
-                style={{ background: 'var(--color-gold)' }}
               >
                 {balance < MIN_BUYIN ? `Need ${money(MIN_BUYIN)} to sit` : 'Sit Down'}
               </Button>
             ) : (
               <div className="grid gap-2">
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="text-muted">To call</span>
-                  <span className="num text-text">{money(snap.toCall)}</span>
+                <div className="grid grid-cols-2 gap-2 mb-1">
+                  <Stat k="To call" v={money(snap.toCall)} />
+                  <Stat
+                    k="Your equity"
+                    v={equityPct === null ? '—' : `${equityPct}%`}
+                    tone="gold"
+                  />
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
                   <Button
                     id="hcFold"
+                    variant="ghost"
                     disabled={!snap.awaitingHuman}
                     onClick={() => humanAct({ type: 'fold' })}
-                    style={{ background: 'var(--glass)', border: '1px solid var(--glass-line)' }}
-                    className="text-text"
                   >
                     Fold
                   </Button>
                   <Button
                     id="hcCall"
+                    variant="ghost"
                     disabled={!snap.awaitingHuman}
                     onClick={() =>
                       humanAct({ type: snap.toCall > 0 ? 'call' : 'check' })
                     }
-                    style={{ background: 'var(--glass)', border: '1px solid var(--glass-line)' }}
-                    className="text-text"
                   >
                     {snap.toCall > 0 ? 'Call' : 'Check'}
                   </Button>
                   <Button
                     id="hcRaise"
+                    variant="green"
                     disabled={!snap.awaitingHuman || !canRaise}
-                    onClick={() => humanAct({ type: 'raise', amount: canRaise?.min })}
-                    className="text-bg-0 font-medium"
-                    style={{ background: 'var(--color-green)' }}
+                    onClick={() => humanAct({ type: 'raise', amount: raiseAmount })}
                   >
-                    Raise
+                    Raise to {money(raiseAmount)}
                   </Button>
                 </div>
 
+                {canRaise && (
+                  <div className="grid gap-1.5 rounded-lg border p-2" style={{ borderColor: 'var(--glass-line)' }}>
+                    <div className="flex items-center justify-between text-[11px] text-muted">
+                      <span>Raise amount</span>
+                      <span className="num text-gold">{money(raiseAmount)}</span>
+                    </div>
+                    <input
+                      type="range"
+                      id="hcRaiseSlider"
+                      min={canRaise.min}
+                      max={canRaise.max}
+                      step={1}
+                      value={raiseAmount}
+                      disabled={!snap.awaitingHuman}
+                      onChange={(e) => setRaiseTo(Number(e.target.value))}
+                      className="hc-raise-slider w-full block accent-[var(--color-gold)]"
+                    />
+                    <div className="flex items-center justify-between text-[10px] text-faint">
+                      <span>{money(canRaise.min!)}</span>
+                      <span>{money(canRaise.max!)}</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={!snap.awaitingHuman}
+                        onClick={() => setRaiseTo(canRaise.min!)}
+                      >
+                        Min
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={!snap.awaitingHuman}
+                        onClick={() =>
+                          setRaiseTo(
+                            Math.max(canRaise.min!, Math.min(canRaise.max!, Math.round(snap.pot / 2))),
+                          )
+                        }
+                      >
+                        1/2 Pot
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={!snap.awaitingHuman}
+                        onClick={() =>
+                          setRaiseTo(Math.max(canRaise.min!, Math.min(canRaise.max!, snap.pot)))
+                        }
+                      >
+                        Pot
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={!snap.awaitingHuman}
+                        onClick={() => setRaiseTo(canRaise.max!)}
+                      >
+                        All-in
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <Button
                   id="hcNext"
+                  variant="ghost"
                   disabled={!snap.handOver}
                   onClick={nextHand}
-                  className="w-full mt-1 text-text"
-                  style={{ background: 'var(--glass)', border: '1px solid var(--glass-line)' }}
+                  className="w-full mt-1"
                 >
                   Next Hand
                 </Button>
                 <Button
                   id="hcCashOut"
+                  variant="ghost"
                   onClick={cashOut}
-                  className="w-full text-text"
-                  style={{ background: 'var(--glass)', border: '1px solid var(--glass-line)' }}
+                  className="w-full"
                 >
                   Cash Out ({money(snap.stacks[0] ?? 0)})
                 </Button>
@@ -434,22 +624,11 @@ export default function HoldemGame() {
   )
 }
 
-/* Card suits are one of the two places emoji-adjacent glyphs are allowed
-   (DEVELOPMENT_GUIDE.md §2): ♠♥♦♣ are text, they take colour and weight. */
-function PlayingCard({ card }: { card: Card }) {
-  const red = isRed(card.s)
-  return (
-    <div
-      className="hc-card w-14 h-20 rounded-[8px] border flex flex-col items-center justify-center"
-      style={{
-        borderColor: 'var(--glass-line)',
-        background: 'var(--color-panel-2)',
-        color: red ? 'var(--color-red)' : 'var(--color-text)',
-        boxShadow: 'var(--lift-1)',
-      }}
-    >
-      <b className="rank-top num text-lg leading-none">{rankStr(card.r)}</b>
-      <span className="text-base leading-none mt-0.5">{SUITS[card.s]}</span>
-    </div>
-  )
-}
+/* Four-max seat layout around the felt oval — index-matched to NAMES.
+   Top-center is the seat directly across from you, left/right flank it. */
+const SEAT_POS: { top: string; left: string }[] = [
+  { top: '88%', left: '50%' }, // You
+  { top: '50%', left: '6%' }, // Ace
+  { top: '8%', left: '50%' }, // Boss
+  { top: '50%', left: '94%' }, // Trixie
+]

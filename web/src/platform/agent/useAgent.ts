@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { bootLegacyAgent } from './legacyBridge'
+import { royalAgent } from './agentUi'
 import type { AgentStats, RoyalAgent } from './types'
 
 /* ============================================================
@@ -7,35 +7,29 @@ import type { AgentStats, RoyalAgent } from './types'
 
    ONE DIRECTION ONLY: the agent is the writer, React reads. It pushes via
    setOnUpdate; nothing here ever writes agent state back. Handoff §2c is
-   explicit that agent-ui.js stays framework-agnostic — the moment React
-   starts driving it, the tilt model and bankroll logic have two owners.
+   explicit that agent-ui.js (now agentUi.ts) stays framework-agnostic — the
+   moment React starts driving it, the tilt model and bankroll logic have
+   two owners.
+
+   Phase 2 simplification (plan §6): `royalAgent` is a real ES module import
+   now, not a classic script loaded async into `window.RoyalAgent`, so there
+   is no boot() to await — module evaluation IS the boot. That deletes every
+   one of legacyBridge.ts's three "has to get right" concerns (window.Casino
+   timing, script load order, the endpoint patch): a real import can't race
+   itself, and the endpoint is just a constructor option now (agentUi.ts).
    ============================================================ */
 
 type AgentUiState = {
-  agent: RoyalAgent | null
+  agent: RoyalAgent
   ready: boolean
   error: string | null
   stats: AgentStats | null
-  boot: () => Promise<void>
 }
 
-export const useAgentStore = create<AgentUiState>((set, get) => ({
-  agent: null,
-  ready: false,
-  error: null,
-  stats: null,
-
-  boot: async () => {
-    if (get().ready || get().agent) return
-    try {
-      const agent = await bootLegacyAgent()
-      agent.setOnUpdate(() => {
-        // Pull, never push.
-        set({ stats: agent.getStats() })
-      })
-      set({ agent, ready: true, stats: agent.getStats() })
-    } catch (e) {
-      set({ error: e instanceof Error ? e.message : String(e) })
-    }
-  },
-}))
+export const useAgentStore = create<AgentUiState>((set) => {
+  royalAgent.setOnUpdate(() => {
+    // Pull, never push.
+    set({ stats: royalAgent.getStats() })
+  })
+  return { agent: royalAgent, ready: true, stats: royalAgent.getStats(), error: null }
+})

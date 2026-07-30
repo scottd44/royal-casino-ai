@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
-import { Gem, Bomb } from 'lucide-react'
-import { GameLayout, Panel, PageHead, Stat, Button } from '../../components/Panel'
+import { Icon } from '@/platform/icons'
+import { GameLayout, Panel, PageHead, Stat, Button } from '@/platform/ui'
+import { AnimatedNumber, Reveal, useMotionPolicy } from '@/platform/motion'
 import BetField, { useBetRef, readBet } from '../../components/BetField'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
@@ -55,6 +56,11 @@ export default function MinesGame() {
   const [stake, setStake] = useState(0)
   const [msg, setMsg] = useState('Set your bet and press Start.')
   const [msgTone, setMsgTone] = useState<'idle' | 'win' | 'lose' | 'live'>('idle')
+  // The tile that ended the round (mine hit), or `null` for a cashout / a
+  // fresh board. Purely cosmetic: it's the origin the reveal-all ripple and
+  // the bust flash key off — never read by game logic.
+  const [hitIdx, setHitIdx] = useState<number | null>(null)
+  const motionPolicy = useMotionPolicy()
 
   // Board truth lives in refs: the tile click handler must read the CURRENT
   // mine layout synchronously, and the agent clicks tiles far faster than a
@@ -97,6 +103,7 @@ export default function MinesGame() {
     setStake(bet)
     setRevealedCount(0)
     setActive(true)
+    setHitIdx(null)
     setMsg('Pick a tile…')
     setMsgTone('live')
   }
@@ -113,10 +120,11 @@ export default function MinesGame() {
     )
   }
 
-  function endLoss(hitIdx: number) {
+  function endLoss(idx: number) {
     activeRef.current = false
     setActive(false)
-    revealAll(hitIdx)
+    setHitIdx(idx)
+    revealAll(idx)
     setMsg(`Boom — you hit a mine and lost ${money(stakeRef.current)}.`)
     setMsgTone('lose')
   }
@@ -174,54 +182,128 @@ export default function MinesGame() {
           ? 'var(--color-gold-2)'
           : 'var(--color-muted)'
 
+  // Risk heat — purely a display ramp over the current multiplier, no
+  // relation to the fair-odds math above. Climbs from calm gold toward
+  // danger red as `curMult` compounds, so the tension of "one more tile"
+  // actually reads on screen instead of living only in the number.
+  const heat = active ? Math.min(1, Math.max(0, (curMult - 1) / 4)) : 0
+  const heatColor = `color-mix(in srgb, var(--color-red) ${Math.round(heat * 100)}%, var(--color-gold-2))`
+  const heatPct = Math.round(heat * 100)
+  const pulseHeat = motionPolicy === 'full' && heat > 0.55
+
+  // The board's ripple origin for the reveal-all sequencing below — the
+  // mine that ended the round, or the board's own centre for a clean
+  // cashout (no single "epicentre" makes sense there, so it fans out
+  // evenly instead).
+  const rippleOrigin = hitIdx ?? 12
+  const busted = !active && msgTone === 'lose'
+
   return (
     <div>
       <PageHead
         title="Mines"
         sub="Uncover gems to grow your multiplier. Hit a mine and you lose the bet."
+        icon="bomb"
       />
 
       <GameLayout>
         <Panel>
-          <div className="mines-grid grid grid-cols-5 gap-2" id="grid">
-            {tiles.map((st, i) => {
-              const revealed = st !== 'hidden'
-              const isGem = st === 'gem'
-              const isMine = st === 'mine' || st === 'dim-mine'
-              const dim = st === 'dim-gem' || st === 'dim-mine'
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  data-idx={i}
-                  onClick={() => onTile(i)}
-                  /* `.revealed` and `.gem` are read by the adapter. `.gem` must
-                     mean exactly "a gem this round revealed" — the query is
-                     document-wide, so dim reveal-all gems must NOT carry it. */
-                  className={[
-                    'tile aspect-square rounded-[10px] border flex items-center justify-center transition-all',
-                    revealed ? 'revealed' : '',
-                    isGem ? 'gem' : '',
-                    isMine ? 'mine' : '',
-                    dim ? 'opacity-40' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  style={{
-                    borderColor: 'var(--glass-line)',
-                    background: isGem
-                      ? 'color-mix(in srgb, var(--color-green) 18%, transparent)'
-                      : isMine
-                        ? 'color-mix(in srgb, var(--color-red) 18%, transparent)'
-                        : 'var(--glass-2)',
-                    cursor: active && !revealed ? 'pointer' : 'default',
-                  }}
-                >
-                  {isGem && <Gem size={20} style={{ color: 'var(--color-green)' }} />}
-                  {isMine && <Bomb size={20} style={{ color: 'var(--color-red)' }} />}
-                </button>
-              )
-            })}
+          {/* Capped at 420px and centered — a bare `grid-cols-5` with no
+              max-width stretches every tile to fill the panel's full width,
+              which on a wide panel blows the 5×5 board up far larger than
+              a mines tile needs to be ("too zoomed in"). Tiles stay square
+              (aspect-square) so capping the grid's own width is enough;
+              nothing about the tile markup/contract below changes. */}
+          <div className="mines-board-wrap relative mx-auto w-full" style={{ maxWidth: 420 }}>
+            <div
+              className={['mines-grid grid grid-cols-5 gap-2 w-full', busted ? 'mines-bust-shake' : ''].join(' ')}
+              id="grid"
+            >
+              {tiles.map((st, i) => {
+                const revealed = st !== 'hidden'
+                const isGem = st === 'gem'
+                const isMine = st === 'mine' || st === 'dim-mine'
+                const isHitMine = st === 'mine'
+                const isDimGem = st === 'dim-gem'
+                const dim = isDimGem || st === 'dim-mine'
+                // Distance-from-origin ripple: dim reveal-all tiles fade in
+                // in a wave from the mine that ended the round (or the
+                // board centre on a clean cashout) instead of all flashing
+                // in at once.
+                const rippleDelayMs = dim ? Math.min(260, Math.abs(i - rippleOrigin) * 14) : 0
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    data-idx={i}
+                    onClick={() => onTile(i)}
+                    /* `.revealed` and `.gem` are read by the adapter. `.gem` must
+                       mean exactly "a gem this round revealed" — the query is
+                       document-wide, so dim reveal-all gems must NOT carry it. */
+                    className={[
+                      'tile relative aspect-square rounded-[10px] border flex items-center justify-center',
+                      'transition-[background,border-color,box-shadow,opacity,transform] duration-300',
+                      active && !revealed ? 'active:scale-90 hover:-translate-y-0.5 hover:border-gold-deep' : '',
+                      revealed ? 'revealed' : '',
+                      isGem ? 'gem' : '',
+                      isMine ? 'mine' : '',
+                      isGem ? 'mines-tile-gem-pop' : '',
+                      isHitMine ? 'mines-tile-mine-hit' : '',
+                      dim ? 'opacity-45' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    style={{
+                      borderColor: isGem
+                        ? 'color-mix(in srgb, var(--color-green) 55%, var(--glass-line))'
+                        : isHitMine
+                          ? 'color-mix(in srgb, var(--color-red) 65%, var(--glass-line))'
+                          : 'var(--glass-line)',
+                      background: isGem
+                        ? 'radial-gradient(circle at 50% 32%, color-mix(in srgb, var(--color-green) 38%, transparent), color-mix(in srgb, var(--color-green) 12%, transparent) 72%)'
+                        : isMine
+                          ? 'radial-gradient(circle at 50% 32%, color-mix(in srgb, var(--color-red) 42%, transparent), color-mix(in srgb, var(--color-red) 14%, transparent) 72%)'
+                          : 'linear-gradient(160deg, var(--color-panel-2) 0%, var(--color-panel) 100%)',
+                      boxShadow: isGem
+                        ? '0 0 16px -3px var(--glow-green), inset 0 1px 0 rgba(255,255,255,0.12)'
+                        : isHitMine
+                          ? '0 0 22px -2px var(--glow-red), inset 0 1px 0 rgba(255,255,255,0.1)'
+                          : 'inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -6px 10px rgba(0,0,0,0.35)',
+                      transitionDelay: dim ? `${rippleDelayMs}ms` : '0ms',
+                      cursor: active && !revealed ? 'pointer' : 'default',
+                    }}
+                  >
+                    {/* The tile button itself (keyed by index) never unmounts for the
+                        whole game — only the icon inside it mounts fresh the instant a
+                        tile flips from hidden, and unmounts again on the next `start()`
+                        reset. That's the genuine mount/unmount boundary here, not the
+                        tile or the grid (Reveal.tsx's own warning against wrapping a
+                        persistent container). */}
+                    {(isGem || isDimGem) && (
+                      <Reveal as="span" preset="scaleIn" duration={0.18} delay={rippleDelayMs / 1000}>
+                        <Icon
+                          name="gem"
+                          size={20}
+                          style={{ color: 'var(--color-green)', opacity: isDimGem ? 0.6 : 1 }}
+                        />
+                      </Reveal>
+                    )}
+                    {isMine && (
+                      <Reveal as="span" preset="scaleIn" duration={0.18} delay={rippleDelayMs / 1000}>
+                        <Icon name="bomb" size={20} style={{ color: 'var(--color-red)' }} />
+                      </Reveal>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* A genuine bust beat, not a silent state flip — a radial red
+                flash that decays over the board the instant a mine goes off,
+                paired with the grid-level shake above. Remounts fresh on
+                every new loss (busted flips false -> true through `start()`
+                resetting msgTone), so it replays every time. */}
+            {busted && <div className="mines-bust-flash absolute inset-0 rounded-2xl pointer-events-none" />}
           </div>
 
           <div
@@ -258,33 +340,92 @@ export default function MinesGame() {
             </select>
           </div>
 
+          {/* gemsFound is NOT in NUMERIC_CONTRACT_IDS (contractIds.ts) — it's free
+              to tween. curMult/nextMult/cashVal ARE (agent-ui.js parses their raw
+              textContent mid-round) — AnimatedNumber's own isNumericContractId
+              guard writes those three straight to text, never tweens, so passing
+              the id through here is exactly the "trust the guard" case the plan
+              calls out. Every id lives on the AnimatedNumber/span node itself, not
+              also on Stat's wrapper div, so there's exactly one of each in the DOM. */}
           <div className="stat-grid grid grid-cols-2 gap-2">
-            <Stat k="Gems found" v={revealedCount} id="gemsFound" />
-            <Stat k="Multiplier" v={`${curMult.toFixed(2)}×`} id="curMult" />
-            <Stat k="Next tile" v={active ? `${nextMult.toFixed(2)}×` : '—'} id="nextMult" />
+            <Stat
+              k="Gems found"
+              v={<AnimatedNumber value={revealedCount} format={(n) => String(n)} id="gemsFound" />}
+            />
+            <Stat
+              k="Multiplier"
+              className={pulseHeat ? 'mines-heat-pulse' : ''}
+              v={
+                <span className="inline-flex items-center gap-1">
+                  {heat > 0.55 && <Icon name="flame" size={13} style={{ color: heatColor }} />}
+                  <AnimatedNumber
+                    value={curMult}
+                    format={(n) => `${n.toFixed(2)}×`}
+                    id="curMult"
+                    style={{
+                      color: heatColor,
+                      textShadow: heat > 0.3 ? `0 0 ${6 + heat * 10}px color-mix(in srgb, ${heatColor} 70%, transparent)` : 'none',
+                    }}
+                  />
+                </span>
+              }
+            />
+            <Stat
+              k="Next tile"
+              v={
+                active ? (
+                  <AnimatedNumber value={nextMult} format={(n) => `${n.toFixed(2)}×`} id="nextMult" />
+                ) : (
+                  <span id="nextMult">—</span>
+                )
+              }
+            />
             <Stat
               k="Cash out"
-              v={active ? fmt(Math.floor(stake * curMult)) : '—'}
-              id="cashVal"
+              v={
+                active ? (
+                  <AnimatedNumber value={Math.floor(stake * curMult)} id="cashVal" />
+                ) : (
+                  <span id="cashVal">—</span>
+                )
+              }
+            />
+          </div>
+
+          {/* Risk meter — a thin bar echoing `heat` so the escalating stakes
+              have a persistent visual anchor beyond the multiplier text
+              itself, à la Keno's hit glow / Wheel's stage glow treatment. */}
+          <div
+            className="risk-meter mt-3 h-1.5 w-full overflow-hidden rounded-full"
+            style={{ background: 'var(--glass-2)' }}
+            aria-hidden="true"
+          >
+            <div
+              className="h-full rounded-full transition-[width,background-color] duration-500"
+              style={{ width: `${active ? Math.max(4, heatPct) : 0}%`, background: heatColor }}
             />
           </div>
 
           {/* #startBtn.disabled IS the adapter's round-in-progress signal. */}
           <Button
             id="startBtn"
+            variant="green"
+            size="lg"
+            block
             disabled={active}
             onClick={start}
-            className="btn-block btn-green w-full mt-4 text-base py-3.5 text-bg-0 font-semibold"
-            style={{ background: 'var(--color-green)' }}
+            className="mt-4"
           >
             Start Game
           </Button>
           <Button
             id="cashBtn"
+            variant="gold"
+            size="lg"
+            block
             disabled={!active || revealedCount === 0}
             onClick={cashOut}
-            className="btn-block w-full mt-2.5 text-base py-3.5 text-bg-0 font-semibold"
-            style={{ background: 'var(--color-gold)' }}
+            className="mt-2.5"
           >
             Cash Out
           </Button>
@@ -292,6 +433,53 @@ export default function MinesGame() {
           <AgentMount />
         </Panel>
       </GameLayout>
+
+      {/* Scoped keyframes — no shared stylesheet touched, kept local to this
+          game per the batch's small-anchored-edits rule for shared files
+          (WheelGame.tsx's own precedent for the same convention). */}
+      <style>{`
+        @keyframes minesGemPop {
+          0% { transform: scale(0.9); filter: brightness(1); }
+          45% { transform: scale(1.07); filter: brightness(1.35); }
+          100% { transform: scale(1); filter: brightness(1); }
+        }
+        .mines-tile-gem-pop { animation: minesGemPop 320ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes minesMineHit {
+          0%, 100% { transform: translateX(0) scale(1); }
+          15% { transform: translateX(-3px) scale(1.05); }
+          30% { transform: translateX(3px) scale(1.05); }
+          45% { transform: translateX(-2px) scale(1.02); }
+          60% { transform: translateX(2px) scale(1.02); }
+          75% { transform: translateX(-1px); }
+        }
+        .mines-tile-mine-hit { animation: minesMineHit 420ms ease-in-out; }
+        @keyframes minesBustShake {
+          0%, 100% { transform: translateX(0); }
+          15% { transform: translateX(-7px) rotate(-0.5deg); }
+          30% { transform: translateX(6px) rotate(0.4deg); }
+          45% { transform: translateX(-5px) rotate(-0.35deg); }
+          60% { transform: translateX(4px) rotate(0.3deg); }
+          75% { transform: translateX(-2px); }
+        }
+        .mines-bust-shake { animation: minesBustShake 460ms ease-in-out; }
+        @keyframes minesBustFlash {
+          0% { opacity: 0.55; }
+          100% { opacity: 0; }
+        }
+        .mines-bust-flash {
+          animation: minesBustFlash 700ms ease-out forwards;
+          background: radial-gradient(circle at 50% 45%, var(--glow-red), transparent 70%);
+        }
+        @keyframes minesHeatPulse {
+          0%, 100% { box-shadow: 0 0 0 0 transparent; }
+          50% { box-shadow: 0 0 16px 1px color-mix(in srgb, var(--color-red) 35%, transparent); }
+        }
+        .mines-heat-pulse { animation: minesHeatPulse 1.15s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) {
+          .mines-tile-gem-pop, .mines-tile-mine-hit, .mines-bust-shake, .mines-heat-pulse { animation: none; }
+          .mines-bust-flash { animation: none; opacity: 0; }
+        }
+      `}</style>
     </div>
   )
 }

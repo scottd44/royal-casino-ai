@@ -11,10 +11,16 @@ import { test, expect, type Page } from '@playwright/test'
    - leave profitTargetPct / stopLossPct at 0, or an auto-stop ends the
      session after one round and every later assertion looks like a bug
    - assert on synchronous state immediately after an action
+
+   Phase 2: re-pointed at the ported module. `window.RoyalAgent` was
+   legacyBridge.ts's classic-script global (now retired); the real ES
+   module singleton is `royalAgent` (platform/agent/agentUi.ts), exposed
+   for tests/console only as `window.__royalAgentDebug`, DEV-only
+   (plan §0.3.3) — production code goes through useAgentStore instead.
    ============================================================ */
 
 type Win = typeof window & {
-  RoyalAgent: {
+  __royalAgentDebug: {
     settings: Record<string, unknown>
     adapters: Record<string, { detect: () => boolean }>
     play: () => Promise<void>
@@ -31,7 +37,7 @@ type Win = typeof window & {
 
 async function bootAgent(page: Page, hash: string) {
   await page.goto(`/#${hash}`)
-  await page.waitForFunction(() => 'RoyalAgent' in window, null, { timeout: 20_000 })
+  await page.waitForFunction(() => '__royalAgentDebug' in window, null, { timeout: 20_000 })
   // Expose the wallet store for assertions without shipping a debug hook.
   await page.evaluate(async () => {
     const mod = await import('/src/platform/money/walletStore.ts')
@@ -43,7 +49,7 @@ async function bootAgent(page: Page, hash: string) {
 async function armRun(page: Page, rounds: number, agentic = false) {
   await page.evaluate(
     ([n, roam]) => {
-      const R = (window as never as Win).RoyalAgent
+      const R = (window as never as Win).__royalAgentDebug
       R.settings.runN = n
       R.settings.agentic = roam
       R.settings.profitTargetPct = 0 // an auto-stop here would end the session early
@@ -59,10 +65,10 @@ async function armRun(page: Page, rounds: number, agentic = false) {
 
 async function runToCompletion(page: Page, timeoutMs = 150_000) {
   await page.evaluate(() => {
-    void (window as never as Win).RoyalAgent.play()
+    void (window as never as Win).__royalAgentDebug.play()
   })
   await page.waitForFunction(
-    () => !(window as never as Win).RoyalAgent.isRunning(),
+    () => !(window as never as Win).__royalAgentDebug.isRunning(),
     null,
     { timeout: timeoutMs },
   )
@@ -73,7 +79,7 @@ test.describe('Exit criterion 1 — adapters detect the React routes', () => {
     test(`${id}.detect() is true on /#${id}`, async ({ page }) => {
       await bootAgent(page, id)
       const detected = await page.evaluate(
-        (g) => (window as never as Win).RoyalAgent.adapters[g].detect(),
+        (g) => (window as never as Win).__royalAgentDebug.adapters[g].detect(),
         id,
       )
       expect(detected).toBe(true)
@@ -83,7 +89,7 @@ test.describe('Exit criterion 1 — adapters detect the React routes', () => {
   test('an adapter does NOT detect a route it does not own', async ({ page }) => {
     await bootAgent(page, 'dice')
     const holdemOnDice = await page.evaluate(() =>
-      (window as never as Win).RoyalAgent.adapters.holdem.detect(),
+      (window as never as Win).__royalAgentDebug.adapters.holdem.detect(),
     )
     expect(holdemOnDice).toBe(false)
   })
@@ -98,7 +104,7 @@ test.describe('Exit criteria 2 & 3 — the LLM-chosen numbers land', () => {
     await runToCompletion(page)
 
     const evidence = await page.evaluate(() => {
-      const R = (window as never as Win).RoyalAgent
+      const R = (window as never as Win).__royalAgentDebug
       const move = R.getLog().find((e) => e.kind === 'move')
       const round = R.getRounds()[0]
       return {
@@ -134,7 +140,7 @@ test.describe('Exit criteria 2 & 3 — the LLM-chosen numbers land', () => {
     await runToCompletion(page)
 
     const evidence = await page.evaluate(() => {
-      const R = (window as never as Win).RoyalAgent
+      const R = (window as never as Win).__royalAgentDebug
       const setup = R.getLog().find((e) => e.kind === 'move')
       return {
         modelMines: (setup?.detail as { mines?: number } | undefined)?.mines ?? null,
@@ -161,7 +167,7 @@ test.describe('Hold’em — the window.*API path', () => {
     await runToCompletion(page, 240_000)
 
     const evidence = await page.evaluate(() => {
-      const R = (window as never as Win).RoyalAgent
+      const R = (window as never as Win).__royalAgentDebug
       const moves = R.getLog().filter((e) => e.kind === 'move')
       return {
         actions: moves.map((m) => m.action),
@@ -195,7 +201,7 @@ test.describe('Exit criterion 4 — navigation', () => {
     })
 
     await expect(page.locator('#grid')).toBeVisible()
-    const id = await page.evaluate(() => (window as never as Win).RoyalAgent.currentGameId())
+    const id = await page.evaluate(() => (window as never as Win).__royalAgentDebug.currentGameId())
     expect(id).toBe('mines')
   })
 
@@ -210,7 +216,7 @@ test.describe('Exit criterion 4 — navigation', () => {
 
     await expect(page.locator('#hcControls')).toBeVisible()
     const detected = await page.evaluate(() =>
-      (window as never as Win).RoyalAgent.adapters.holdem.detect(),
+      (window as never as Win).__royalAgentDebug.adapters.holdem.detect(),
     )
     expect(detected).toBe(true)
   })
@@ -230,7 +236,7 @@ test.describe('Exit criterion 5 — a multi-round agentic run', () => {
     await runToCompletion(page, 480_000)
 
     const after = await page.evaluate(() => {
-      const R = (window as never as Win).RoyalAgent
+      const R = (window as never as Win).__royalAgentDebug
       return {
         balance: (window as never as Win).__wallet.getState().balance,
         stats: R.getStats(),

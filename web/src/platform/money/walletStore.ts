@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+import { motion } from '@/platform/motion/motionStore'
+
 /* ============================================================
    The wallet — the one global piece of state in Phase 0.
 
@@ -69,7 +71,15 @@ export const useWalletStore = create<WalletState>()(
       payout: (amount) => {
         const v = Math.round(Number(amount))
         if (!Number.isFinite(v) || v <= 0) return
+        // js/core.js:74-82 -- `before` is read BEFORE the credit, because the
+        // tier ratio (amount / bankroll) is judged against what the win landed
+        // on, not what it grew into. The burst lives inside payout() itself
+        // (not in a component) for the same reason it did in core.js: every
+        // game funnels winnings through this one function, so all 25 games
+        // celebrate without a single game module knowing confetti exists.
+        const before = get().balance
         set((s) => ({ balance: s.balance + v }))
+        motion.celebrate(v, before)
       },
 
       setBalance: (amount) => set({ balance: Math.max(0, Math.round(amount)) }),

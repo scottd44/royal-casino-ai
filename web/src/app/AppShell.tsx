@@ -1,9 +1,17 @@
-import { useEffect, useState, type ReactNode } from 'react'
-import { PanelLeft } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
+import { Icon } from '@/platform/icons'
 import Sidebar from './Sidebar'
 import { useWalletStore } from '@/platform/money/walletStore'
 import { money } from '@/platform/money/format'
-import { useAgentStore } from '@/platform/agent/useAgent'
+import { ToastHost } from '@/platform/ui/toast'
+import { LabDrawer, LAB_HANDLE_PX } from '@/modules/casino/lab/LabDrawer'
+import { LabHud } from '@/modules/casino/lab/LabHud'
+import { LabReportModal } from '@/modules/casino/lab/LabReportModal'
+import { useLabUiStore } from '@/modules/casino/lab/labUiStore'
+// LabDrawer/LabHud below are now the always-mounted component that keeps
+// `royalAgent` (platform/agent/agentUi.ts) alive — it's constructed at
+// module-eval time, not on first render, so importing it transitively
+// through the Lab components is enough; no boot() call needed (plan §6).
 
 /* ============================================================
    The shell. DEVELOPMENT_GUIDE.md §3b:
@@ -27,13 +35,20 @@ import { useAgentStore } from '@/platform/agent/useAgent'
 export default function AppShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false)
   const balance = useWalletStore((s) => s.balance)
-  const boot = useAgentStore((s) => s.boot)
 
-  // Boot the legacy agent once. bootLegacyAgent is idempotent, which matters
-  // because StrictMode runs this effect twice in dev.
-  useEffect(() => {
-    void boot()
-  }, [boot])
+  // No boot effect needed anymore (plan §6) — `royalAgent` is a real ES
+  // module import (platform/agent/agentUi.ts); useAgentStore wires
+  // setOnUpdate at module-eval time, so it's ready synchronously.
+
+  // Drawer clearance -- ported from agent-lab.js:175-180's updateBodyPadding().
+  // `.app-main` is the ONLY scroller (doc comment above), so this is where
+  // legacy's own "clearance belongs to the scrolling pane" comment already
+  // pointed. One state (labUiStore), one writer (LabDrawer.tsx's drag-end /
+  // collapse handlers) -- AppShell only ever reads it.
+  const drawerOpen = useLabUiStore((s) => s.drawerOpen)
+  const drawerCollapsed = useLabUiStore((s) => s.drawerCollapsed)
+  const drawerHeight = useLabUiStore((s) => s.drawerHeight)
+  const labPaddingBottom = !drawerOpen ? 0 : drawerCollapsed ? LAB_HANDLE_PX : LAB_HANDLE_PX + drawerHeight
 
   return (
     <div
@@ -45,7 +60,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
     >
       <Sidebar collapsed={collapsed} />
 
-      <main className="app-main h-full overflow-y-auto overflow-x-hidden min-w-0">
+      <main
+        className="app-main h-full overflow-y-auto overflow-x-hidden min-w-0"
+        style={{ paddingBottom: labPaddingBottom, transition: 'padding-bottom 0.2s var(--ease)' }}
+      >
         <header
           className="topbar sticky top-0 z-10 flex items-center gap-3 px-5 border-b"
           style={{
@@ -63,7 +81,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             onClick={() => setCollapsed((c) => !c)}
             className="p-2 rounded-[10px] text-muted hover:text-text hover:bg-white/5 transition-colors"
           >
-            <PanelLeft size={18} />
+            <Icon name="panel-left" size={18} />
           </button>
 
           {/*  #aiStatus is written directly by agent-ui.js setStatus().
@@ -77,6 +95,18 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
         <div className="px-5 py-6">{children}</div>
       </main>
+
+      {/* Fixed-position siblings of <main>, OUTSIDE .app-main's scroll
+          region — same reasoning as #aiStatus above: these must persist
+          across route changes, never part of a route's mount/unmount cycle
+          (plan §5's "Wiring into AppShell.tsx"). LabReportModal is mounted
+          here (not inside LabDrawer) because it opens via
+          `royalAgent.setOnReport(...)` and has to survive LabDrawer
+          returning null while the drawer is closed. */}
+      <LabDrawer />
+      <LabHud />
+      <LabReportModal />
+      <ToastHost />
     </div>
   )
 }

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { GameLayout, Panel, PageHead, Stat, Button } from '../../components/Panel'
+import { GameLayout, Panel, PageHead, Stat, Button } from '@/platform/ui'
+import { AnimatedNumber, Reveal } from '@/platform/motion'
+import { Icon } from '@/platform/icons'
 import BetField, { useBetRef, readBet } from '../../components/BetField'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
@@ -19,18 +21,37 @@ import { fmt } from '@/platform/money/format'
 
    #slider is UNCONTROLLED for the same reason #betInput is — the adapter
    writes it raw. See components/BetField.tsx for the full rationale.
+
+   VISUAL PASS (this file) — Dice/Mines/Holdem only ever got Phase 2's
+   lighter "motion + icons" treatment; every other ported game got a real
+   "billion-dollar" restyle (see Wheel/Slots/Crash). This pass gives the
+   probability-line slider a real console housing and richer feedback
+   WITHOUT touching payout math, the round-resolution timer (still a plain
+   setInterval — a backgrounded tab must still resolve the round), or any
+   contract id. Escalating win celebration (confetti tiering) is already
+   wired globally in walletStore.payout() -> motion.celebrate(), so this
+   file doesn't need its own confetti call — see platform/motion/confetti.ts.
    ============================================================ */
 
 const HOUSE_EDGE = 0.99
 const TICK_MS = 55
 const TICKS = 8
 
-type Roll = { roll: number; win: boolean }
+type Roll = { id: number; roll: number; win: boolean }
 
 export default function DiceGame() {
   const betRef = useBetRef()
   const sliderRef = useRef<HTMLInputElement>(null)
   const rollingRef = useRef(false)
+  // Monotonic, never reused — `history` slices to the last 9, so an
+  // array-index key would get reassigned to a DIFFERENT roll the moment the
+  // list shifts, and Reveal would skip the entrance on the actually-new
+  // entry (or worse, replay it on an old one). See Reveal.tsx's own note on
+  // keying content that mounts/unmounts.
+  const rollIdRef = useRef(0)
+  // Same reasoning as rollIdRef — a fresh key per resolution so the win
+  // burst ring replays every time, never once and never on the wrong round.
+  const burstIdRef = useRef(0)
 
   const [target, setTarget] = useState(50)
   const [mode, setMode] = useState<'under' | 'over'>('under')
@@ -40,6 +61,7 @@ export default function DiceGame() {
   const [msg, setMsg] = useState('Set your target and roll.')
   const [history, setHistory] = useState<Roll[]>([])
   const [betView, setBetView] = useState(20)
+  const [burstId, setBurstId] = useState<number | null>(null)
 
   const placeBet = useWalletStore((s) => s.placeBet)
   const payout = useWalletStore((s) => s.payout)
@@ -84,6 +106,7 @@ export default function DiceGame() {
     rollingRef.current = true
     setRolling(true)
     setOutcome(null)
+    setBurstId(null)
 
     let result = Math.floor(Math.random() * 10000) / 100
     if (cheatWin()) {
@@ -109,67 +132,124 @@ export default function DiceGame() {
           const winnings = Math.floor(stake * mult)
           payout(winnings)
           setMsg(`${result.toFixed(2)} is ${mode} ${t} — won +${fmt(winnings - stake)}!`)
+          burstIdRef.current += 1
+          setBurstId(burstIdRef.current)
         } else {
           setMsg(`${result.toFixed(2)} is not ${mode} ${t}. You lose.`)
         }
 
-        setHistory((h) => [...h.slice(-9), { roll: result, win: won }])
+        setHistory((h) => [...h.slice(-9), { id: ++rollIdRef.current, roll: result, win: won }])
         rollingRef.current = false
         setRolling(false)
       }
     }, TICK_MS)
   }
 
+  const glowColor =
+    outcome === 'win' ? 'var(--color-green)' : outcome === 'lose' ? 'var(--color-red)' : null
+
   return (
     <div>
       <PageHead
         title="Dice"
         sub="Pick a target and predict whether the roll lands under or over it."
+        icon="dices"
       />
 
       <GameLayout>
         <Panel>
-          <div className="dice-display text-center py-6">
+          {/* The console — a recessed, backlit readout housing, same family
+              of treatment as Slots' machine bezel / Wheel's stage: layered
+              gradients + inset shadows for real depth, a border that flushes
+              to the outcome colour, never a flat text block. */}
+          <div
+            className={`dice-console relative rounded-2xl px-6 py-7 text-center overflow-hidden ${
+              rolling ? 'dice-tension' : ''
+            }`}
+            style={{
+              background:
+                'radial-gradient(120% 140% at 50% -10%, color-mix(in srgb, #10182c 88%, transparent), var(--color-panel-2) 72%)',
+              border: `1px solid ${glowColor ? `color-mix(in srgb, ${glowColor} 45%, var(--glass-line))` : 'var(--glass-line)'}`,
+              boxShadow: `inset 0 0 40px rgba(0,0,0,0.45), ${
+                glowColor ? `0 0 50px -12px color-mix(in srgb, ${glowColor} 45%, transparent)` : 'none'
+              }`,
+              transition: 'border-color 0.3s var(--ease), box-shadow 0.3s var(--ease)',
+            }}
+          >
+            {/* Marquee strip, same recipe as Slots' housing header. */}
+            <div className="flex items-center justify-center gap-2.5 mb-3">
+              <span
+                className="h-1.5 w-1.5 rounded-full"
+                style={{ background: 'var(--color-gold)', boxShadow: '0 0 6px var(--glow-gold)' }}
+              />
+              <span
+                className="text-[11px] uppercase tracking-[0.35em] font-semibold"
+                style={{ color: 'var(--color-gold)' }}
+              >
+                Probability Engine
+              </span>
+              <span
+                className="h-1.5 w-1.5 rounded-full"
+                style={{ background: 'var(--color-gold)', boxShadow: '0 0 6px var(--glow-gold)' }}
+              />
+            </div>
+
+            {burstId !== null && (
+              <div key={burstId} className="dice-burst-ring pointer-events-none" style={{ borderColor: 'var(--color-green)' }} />
+            )}
+
             <div
-              className="dice-roll-num num text-6xl font-semibold"
+              className="dice-roll-num num text-7xl font-semibold relative"
               id="rollNum"
               style={{
-                color:
-                  outcome === 'win'
-                    ? 'var(--color-green)'
-                    : outcome === 'lose'
-                      ? 'var(--color-red)'
-                      : 'var(--color-text)',
-                textShadow:
-                  outcome === 'win'
-                    ? '0 0 24px var(--glow-green)'
-                    : outcome === 'lose'
-                      ? '0 0 24px var(--glow-red)'
-                      : 'none',
+                color: glowColor ?? 'var(--color-text)',
+                textShadow: glowColor ? `0 0 28px ${glowColor}` : 'none',
                 transition: 'color 0.2s var(--ease)',
               }}
             >
               {display}
             </div>
-            <div className="hint text-sm text-muted mt-2" id="rollMsg">
-              {msg}
+
+            <div className="hint text-sm text-muted mt-3 flex items-center justify-center gap-1.5" id="rollMsg">
+              {outcome === 'win' && <Icon name="trending-up" size={14} color="var(--color-green)" />}
+              {outcome === 'lose' && <Icon name="x" size={14} color="var(--color-red)" />}
+              <span>{msg}</span>
             </div>
           </div>
 
-          <div className="slider-track relative py-4" id="sliderTrack">
+          <div className="slider-track relative pt-8 pb-4" id="sliderTrack">
+            {/* Tick marks under the labels below — purely decorative, keyed
+                to the same five evenly-spaced stops the text labels use. */}
+            <div className="absolute inset-x-0 top-2 flex justify-between px-[2px] pointer-events-none">
+              {[0, 25, 50, 75, 100].map((tick) => (
+                <span
+                  key={tick}
+                  className="w-px h-2.5 rounded-full"
+                  style={{ background: 'var(--glass-line)' }}
+                />
+              ))}
+            </div>
+
             <div
-              className="dice-marker num absolute -top-1 text-xs px-1.5 py-0.5 rounded"
+              className="dice-marker num absolute -top-1 text-xs font-semibold px-2 py-1 rounded-md"
               id="diceMarker"
               style={{
                 left: `${outcome ? Number(display) : 0}%`,
                 opacity: outcome ? 1 : 0,
-                transform: 'translateX(-50%)',
+                transform: 'translate(-50%, -100%)',
                 background: outcome === 'win' ? 'var(--color-green)' : 'var(--color-red)',
                 color: '#05070c',
+                boxShadow: outcome
+                  ? `0 0 16px ${outcome === 'win' ? 'var(--glow-green)' : 'var(--glow-red)'}`
+                  : 'none',
                 transition: 'left 0.3s var(--ease), opacity 0.2s var(--ease)',
               }}
             >
               {display}
+              <span
+                className="absolute left-1/2 -translate-x-1/2 -bottom-[5px] w-2 h-2 rotate-45"
+                style={{ background: 'inherit' }}
+              />
             </div>
             <input
               ref={sliderRef}
@@ -178,7 +258,7 @@ export default function DiceGame() {
               max="98"
               step="1"
               defaultValue={50}
-              className="dice-slider w-full"
+              className="dice-slider w-full block"
               id="slider"
               onChange={(e) => onSlider(e.target.value)}
               style={{
@@ -186,11 +266,12 @@ export default function DiceGame() {
                   mode === 'under'
                     ? `linear-gradient(90deg, var(--color-green) 0 ${target}%, var(--color-red) ${target}% 100%)`
                     : `linear-gradient(90deg, var(--color-red) 0 ${target}%, var(--color-green) ${target}% 100%)`,
-                height: 6,
+                height: 8,
                 borderRadius: 999,
                 appearance: 'none',
                 WebkitAppearance: 'none',
                 outline: 'none',
+                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.4), 0 0 0 1px var(--glass-line)',
               }}
             />
           </div>
@@ -207,19 +288,30 @@ export default function DiceGame() {
           <div className="history">
             <h4 className="text-xs uppercase tracking-wide text-muted mb-2">Recent rolls</h4>
             <div className="history-list flex flex-wrap gap-1.5" id="history">
-              {[...history].reverse().map((r, i) => (
-                <span
-                  key={`${r.roll}-${i}`}
-                  className={`pill num text-xs px-2 py-1 rounded-md ${r.win ? 'win' : 'lose'}`}
-                  style={{
-                    background: r.win
-                      ? 'color-mix(in srgb, var(--color-green) 16%, transparent)'
-                      : 'color-mix(in srgb, var(--color-red) 16%, transparent)',
-                    color: r.win ? 'var(--color-green)' : 'var(--color-red)',
-                  }}
-                >
-                  {r.roll.toFixed(2)}
-                </span>
+              {/* Each pill is a genuine mount when it's appended (and an
+                  eventual unmount once slice(-9) drops it) — the list
+                  container itself stays mounted the whole game, so ONLY the
+                  item gets Reveal, per Reveal.tsx's own warning against
+                  wrapping a persistent container. */}
+              {[...history].reverse().map((r) => (
+                <Reveal key={r.id} as="span" preset="scaleIn" duration={0.22}>
+                  <span
+                    className={`pill num text-xs px-2 py-1 rounded-md ${r.win ? 'win' : 'lose'}`}
+                    style={{
+                      background: r.win
+                        ? 'color-mix(in srgb, var(--color-green) 16%, transparent)'
+                        : 'color-mix(in srgb, var(--color-red) 16%, transparent)',
+                      color: r.win ? 'var(--color-green)' : 'var(--color-red)',
+                      border: `1px solid ${
+                        r.win
+                          ? 'color-mix(in srgb, var(--color-green) 30%, transparent)'
+                          : 'color-mix(in srgb, var(--color-red) 30%, transparent)'
+                      }`,
+                    }}
+                  >
+                    {r.roll.toFixed(2)}
+                  </span>
+                </Reveal>
               ))}
             </div>
           </div>
@@ -237,41 +329,63 @@ export default function DiceGame() {
               <Button
                 id="underBtn"
                 onClick={() => setMode('under')}
-                className={mode === 'under' ? 'text-bg-0' : 'text-muted'}
-                style={{
-                  background: mode === 'under' ? 'var(--color-green)' : 'var(--glass)',
-                  border: '1px solid var(--glass-line)',
-                }}
+                variant={mode === 'under' ? 'green' : 'ghost'}
+                className={mode === 'under' ? undefined : 'text-muted'}
               >
                 Roll Under
               </Button>
               <Button
                 id="overBtn"
                 onClick={() => setMode('over')}
-                className={mode === 'over' ? 'text-bg-0' : 'text-muted'}
-                style={{
-                  background: mode === 'over' ? 'var(--color-green)' : 'var(--glass)',
-                  border: '1px solid var(--glass-line)',
-                }}
+                variant={mode === 'over' ? 'green' : 'ghost'}
+                className={mode === 'over' ? undefined : 'text-muted'}
               >
                 Roll Over
               </Button>
             </div>
           </div>
 
+          {/* None of these four ids are in NUMERIC_CONTRACT_IDS (contractIds.ts) —
+              they're free to tween. AnimatedNumber still takes `id` so its own
+              contract-id guard runs (belt and suspenders), but the id actually
+              lives on the AnimatedNumber node, not on Stat's wrapper div, so
+              there's exactly one #winChance/#mult/#targetV/#profit in the DOM. */}
           <div className="stat-grid grid grid-cols-2 gap-2">
-            <Stat k="Win chance" v={`${winChance.toFixed(0)}%`} id="winChance" />
-            <Stat k="Multiplier" v={`${multiplier.toFixed(2)}×`} id="mult" />
-            <Stat k="Target" v={target.toFixed(2)} id="targetV" />
-            <Stat k="Profit on win" v={betView > 0 ? `+${fmt(profit)}` : '—'} id="profit" />
+            <Stat
+              k="Win chance"
+              tone="green"
+              v={<AnimatedNumber value={winChance} format={(n) => `${n.toFixed(0)}%`} id="winChance" />}
+            />
+            <Stat
+              k="Multiplier"
+              tone="gold"
+              v={<AnimatedNumber value={multiplier} format={(n) => `${n.toFixed(2)}×`} id="mult" />}
+            />
+            <Stat
+              k="Target"
+              v={<AnimatedNumber value={target} format={(n) => n.toFixed(2)} id="targetV" />}
+            />
+            <Stat
+              k="Profit on win"
+              tone="green"
+              v={
+                betView > 0 ? (
+                  <AnimatedNumber value={profit} format={(n) => `+${fmt(n)}`} id="profit" />
+                ) : (
+                  <span id="profit">—</span>
+                )
+              }
+            />
           </div>
 
           <Button
             id="rollBtn"
+            variant="gold"
+            size="lg"
+            block
             disabled={rolling}
             onClick={roll}
-            className="btn-block w-full mt-4 text-base py-3.5 text-bg-0 font-semibold"
-            style={{ background: 'var(--color-gold)' }}
+            className="mt-4"
           >
             ROLL DICE
           </Button>
@@ -279,6 +393,62 @@ export default function DiceGame() {
           <AgentMount />
         </Panel>
       </GameLayout>
+
+      {/* Scoped styling for the slider thumb + tension/burst keyframes — no
+          shared stylesheet touched, kept local to this game (same pattern as
+          Wheel's scoped <style> block). */}
+      <style>{`
+        .dice-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 22px;
+          height: 22px;
+          border-radius: 999px;
+          background: radial-gradient(circle at 35% 30%, #fff6da, var(--color-gold-2) 45%, var(--color-gold) 100%);
+          border: 2px solid rgba(5, 7, 12, 0.6);
+          box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55), 0 0 14px var(--glow-gold);
+          cursor: pointer;
+          transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
+        }
+        .dice-slider::-webkit-slider-thumb:hover { transform: scale(1.12); }
+        .dice-slider::-webkit-slider-thumb:active { transform: scale(0.94); }
+        .dice-slider::-moz-range-thumb {
+          width: 18px;
+          height: 18px;
+          border-radius: 999px;
+          background: radial-gradient(circle at 35% 30%, #fff6da, var(--color-gold-2) 45%, var(--color-gold) 100%);
+          border: 2px solid rgba(5, 7, 12, 0.6);
+          box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55), 0 0 14px var(--glow-gold);
+          cursor: pointer;
+        }
+
+        @keyframes diceTensionGlow {
+          0%, 100% { box-shadow: inset 0 0 40px rgba(0,0,0,0.45), 0 0 0px transparent; }
+          50% { box-shadow: inset 0 0 40px rgba(0,0,0,0.45), 0 0 34px -10px color-mix(in srgb, var(--color-gold) 55%, transparent); }
+        }
+        .dice-tension { animation: diceTensionGlow 0.6s ease-in-out infinite; }
+
+        @keyframes diceBurstRing {
+          0% { opacity: 0.9; transform: translate(-50%, -50%) scale(0.4); }
+          100% { opacity: 0; transform: translate(-50%, -50%) scale(2.6); }
+        }
+        .dice-burst-ring {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 140px;
+          height: 140px;
+          border-radius: 999px;
+          border-width: 2px;
+          border-style: solid;
+          animation: diceBurstRing 0.7s cubic-bezier(0.22, 0.8, 0.28, 1) forwards;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .dice-tension { animation: none; }
+          .dice-burst-ring { animation: none; opacity: 0; }
+        }
+      `}</style>
     </div>
   )
 }

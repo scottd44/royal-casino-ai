@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "playwright test tests/dom-contract.spec.ts tests/shim.spec.ts tests/motion.spec.ts tests/icons.spec.ts tests/tracker-probe.spec.ts",
+    "test:live": "playwright test tests/agent-live.spec.ts"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
