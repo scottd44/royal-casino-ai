@@ -11,6 +11,7 @@ import { LabStats } from './LabStats'
 import { LabTiltMeter } from './LabTiltMeter'
 import { LabChart } from './LabChart'
 import { LabLog } from './LabLog'
+import { LabSys } from './LabSys'
 
 /* ============================================================
    LabDrawer -- the AI control deck. Ported (behavior, not markup) from
@@ -514,6 +515,7 @@ export function LabDrawer() {
             <div className="text-xs font-bold uppercase tracking-wide text-muted">Session telemetry</div>
             <LabStats />
             <LabChart />
+            <LabSys />
           </div>
 
           {/* ---- column 3: move-by-move history ---- */}

@@ -64,6 +64,19 @@ export default function AppShell({ children }: { children: ReactNode }) {
       style={{
         gridTemplateColumns: isMobile ? '1fr' : `${collapsed ? 'var(--sbw-min)' : 'var(--sbw)'} 1fr`,
         transition: 'grid-template-columns 0.28s var(--ease)',
+        // iOS "Add to Home Screen" runs the app in standalone mode with no
+        // Safari chrome, so the notch/status-bar area that a normal mobile
+        // browser tab reserves for itself becomes part of our own viewport
+        // instead — without this, the topbar (and its hamburger button)
+        // render UNDER the notch and are visually clipped AND untouchable,
+        // since iOS doesn't deliver taps through the notch cutout. `env()`
+        // resolves to 0 on every non-notch device/browser tab, so this is a
+        // no-op everywhere else. `viewport-fit=cover` in index.html is what
+        // makes these env() values non-zero in the first place.
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
       <Sidebar

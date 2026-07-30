@@ -109,11 +109,21 @@ export default function Sidebar({
       }
       style={{
         borderColor: 'var(--glass-line)',
-        background: 'var(--glass-panel)',
+        // Desktop keeps the frosted glass rail. The mobile drawer sits on
+        // top of the game as a real overlay rather than a grid cell, so a
+        // translucent background let the game's own colors/motion show
+        // through underneath it — solid here reads as a proper drawer.
+        background: mobile ? 'var(--color-bg-1)' : 'var(--glass-panel)',
         ...(mobile
           ? {
               transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
               transition: 'transform 0.24s var(--ease)',
+              boxShadow: mobileOpen ? '0 0 40px rgba(0,0,0,0.5)' : 'none',
+              // `position:fixed` positions against the viewport, not
+              // app-shell's own box — so its safe-area padding (AppShell.tsx)
+              // doesn't reach this drawer. Same iOS-standalone-notch fix,
+              // applied directly here for the same reason.
+              paddingTop: 'env(safe-area-inset-top)',
             }
           : undefined),
       }}
@@ -133,7 +143,10 @@ export default function Sidebar({
         )}
       </button>
 
-      <nav className="sb-nav flex-1 min-h-0 overflow-y-auto px-2 pb-4">
+      <nav
+        className="sb-nav flex-1 min-h-0 overflow-y-auto px-2 pb-4"
+        style={mobile ? { paddingBottom: 'env(safe-area-inset-bottom)' } : undefined}
+      >
         <button
           type="button"
           data-nav=""
@@ -149,30 +162,37 @@ export default function Sidebar({
             entry point for the AI Lab control deck, independent of which
             route you're on. Without this, the only way to reach the drawer
             was AgentMount's "Let AI play" button buried inside each game's
-            own panel — invisible from the Lobby. */}
-        <button
-          type="button"
-          id="sbAiLab"
-          onClick={() => setDrawerOpen(true)}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-muted hover:text-text hover:bg-white/5 transition-colors"
-          title="Open the AI Lab control deck"
-        >
-          <Icon name="bot" size={18} className="shrink-0" style={{ color: 'var(--color-purple)' }} />
-          {!collapsed && (
-            <span className="flex-1 flex items-center gap-2 text-sm whitespace-nowrap">
-              AI Lab
-              <span
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                style={{
-                  background: 'color-mix(in srgb, var(--color-purple) 20%, transparent)',
-                  color: 'var(--color-purple)',
-                }}
-              >
-                LIVE
+            own panel — invisible from the Lobby.
+
+            Hidden on mobile: the AI Lab is a desktop feature (it drives a
+            local Ollama model), and with this + AgentMount's own button
+            both gone on mobile there's simply no way to open the drawer
+            from a phone — that's deliberate. */}
+        {!mobile && (
+          <button
+            type="button"
+            id="sbAiLab"
+            onClick={() => setDrawerOpen(true)}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-muted hover:text-text hover:bg-white/5 transition-colors"
+            title="Open the AI Lab control deck"
+          >
+            <Icon name="bot" size={18} className="shrink-0" style={{ color: 'var(--color-purple)' }} />
+            {!collapsed && (
+              <span className="flex-1 flex items-center gap-2 text-sm whitespace-nowrap">
+                AI Lab
+                <span
+                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                  style={{
+                    background: 'color-mix(in srgb, var(--color-purple) 20%, transparent)',
+                    color: 'var(--color-purple)',
+                  }}
+                >
+                  LIVE
+                </span>
               </span>
-            </span>
-          )}
-        </button>
+            )}
+          </button>
+        )}
 
         <div className="sb-sep my-2 h-px" style={{ background: 'var(--glass-line)' }} />
 

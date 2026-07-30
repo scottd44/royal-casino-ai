@@ -1,6 +1,7 @@
 import { Icon } from '@/platform/icons'
 import { Button } from '@/platform/ui'
 import { useLabUiStore } from '@/modules/casino/lab/labUiStore'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
    Explicit mount point for the "Let AI play" control.
@@ -21,17 +22,24 @@ import { useLabUiStore } from '@/modules/casino/lab/labUiStore'
    ============================================================ */
 export default function AgentMount() {
   const setDrawerOpen = useLabUiStore((s) => s.setDrawerOpen)
+  // The AI Lab drives a local Ollama model — a desktop-only feature. On
+  // mobile the mount point stays in the DOM (`#agentMount` is a dom-contract
+  // fixture, tests/dom-contract.spec.ts) but renders empty; `empty:mt-0`
+  // below collapses its own margin so it takes up no visible space.
+  const isMobile = useIsMobile()
 
   return (
     <div id="agentMount" data-agent-mount className="mt-4 empty:mt-0">
-      <Button
-        variant="purple"
-        size="sm"
-        className="inline-flex items-center gap-1.5"
-        onClick={() => setDrawerOpen(true)}
-      >
-        <Icon name="bot" size={14} /> Let AI play
-      </Button>
+      {!isMobile && (
+        <Button
+          variant="purple"
+          size="sm"
+          className="inline-flex items-center gap-1.5"
+          onClick={() => setDrawerOpen(true)}
+        >
+          <Icon name="bot" size={14} /> Let AI play
+        </Button>
+      )}
     </div>
   )
 }
