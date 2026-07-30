@@ -12,6 +12,7 @@ import { useIsMobile } from '@/platform/layout/useMediaQuery'
 import { soundPref, useSoundStore } from '@/platform/audio/soundStore'
 import { defaultPack } from '@/platform/audio/defaultPack'
 import { useGlobalClickSound } from '@/platform/audio/useGlobalClickSound'
+import { useAudioUnlock } from '@/platform/audio/useAudioUnlock'
 // LabDrawer/LabHud below are now the always-mounted component that keeps
 // `royalAgent` (platform/agent/agentUi.ts) alive — it's constructed at
 // module-eval time, not on first render, so importing it transitively
@@ -49,6 +50,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const addFunds = useWalletStore((s) => s.addFunds)
   const muted = useSoundStore((s) => s.muted)
   useGlobalClickSound()
+  useAudioUnlock()
 
   // No boot effect needed anymore (plan §6) — `royalAgent` is a real ES
   // module import (platform/agent/agentUi.ts); useAgentStore wires

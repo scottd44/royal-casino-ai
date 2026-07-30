@@ -96,8 +96,12 @@ function buildImpulseResponse(c: AudioContext): AudioBuffer {
   return buf
 }
 
-function getCtx(): AudioContext | null {
-  if (useSoundStore.getState().muted) return null
+/** Creates (once) and resumes the shared AudioContext, independent of the
+ *  mute flag — `unlockAudio()` below needs this to run on the very first
+ *  touch even while sound might be muted, so the hardware is warm the
+ *  moment it's unmuted. `getCtx()` is the only thing that also checks
+ *  `muted` before handing the context to a sound primitive. */
+function ensureCtx(): AudioContext | null {
   if (!ctx) {
     const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!AC) return null
@@ -107,9 +111,42 @@ function getCtx(): AudioContext | null {
       return null
     }
   }
-  if (ctx.state === 'suspended') ctx.resume()
+  if (ctx.state !== 'running') ctx.resume()
   ensureGraph(ctx)
   return ctx
+}
+
+function getCtx(): AudioContext | null {
+  if (useSoundStore.getState().muted) return null
+  return ensureCtx()
+}
+
+/** Mobile Safari/Chrome (and especially an installed "Add to Home Screen"
+ *  PWA, which is stricter still) only let an AudioContext start producing
+ *  sound if it's created AND resumed synchronously inside a genuine touch
+ *  gesture — and even then, some iOS versions need an actual buffer
+ *  played, not just `resume()`, to fully wake the audio hardware. Desktop
+ *  Chrome/Firefox have no such restriction, which is exactly why this
+ *  worked on web and went silent on a phone.
+ *
+ *  Call this from the FIRST touch/pointer/click/key anywhere in the app
+ *  (see useAudioUnlock.ts) — it creates the context, resumes it, and
+ *  starts a truly silent one-sample buffer, all synchronously within that
+ *  gesture's call stack. Safe to call more than once; every call after the
+ *  first is a cheap no-op resume(). */
+export function unlockAudio(): void {
+  const c = ensureCtx()
+  if (!c) return
+  try {
+    const buf = c.createBuffer(1, 1, c.sampleRate)
+    const src = c.createBufferSource()
+    src.buffer = buf
+    src.connect(c.destination)
+    src.start(0)
+  } catch {
+    // Best-effort unlock -- a failure here just means the first REAL sound
+    // has to do the unlocking instead, same as before this existed.
+  }
 }
 
 function getNoiseBuffer(c: AudioContext, seconds: number): AudioBuffer {
