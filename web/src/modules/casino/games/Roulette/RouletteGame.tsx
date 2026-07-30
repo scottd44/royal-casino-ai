@@ -6,6 +6,7 @@ import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt } from '@/platform/money/format'
 import { toast } from '@/platform/ui/toast'
 import AgentMount from '../../components/AgentMount'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
    European Roulette — ported from js/games/roulette.js. Single-zero wheel,
@@ -151,6 +152,7 @@ type RouletteApiShape = {
 }
 
 export default function RouletteGame(): JSX.Element {
+  const isMobile = useIsMobile()
   const placeBetWallet = useWalletStore((s) => s.placeBet)
   const payout = useWalletStore((s) => s.payout)
 
@@ -350,15 +352,16 @@ export default function RouletteGame(): JSX.Element {
     const amt = bets[key]
     if (!amt) return null
     const layers = Math.min(3, Math.max(1, Math.ceil(amt / selectedChip)))
+    const chipSize = isMobile ? 14 : 20
     return (
       <span className="rt-chip-stack pointer-events-none absolute -top-2 -right-1.5 z-10">
         {Array.from({ length: layers }).map((_, i) => (
           <span
             key={i}
-            className="absolute rounded-full border num text-[9px] font-bold flex items-center justify-center"
+            className={isMobile ? 'absolute rounded-full border num text-[7px] font-bold flex items-center justify-center' : 'absolute rounded-full border num text-[9px] font-bold flex items-center justify-center'}
             style={{
-              width: 20,
-              height: 20,
+              width: chipSize,
+              height: chipSize,
               top: -i * 3,
               right: -i * 1.5,
               background: 'radial-gradient(circle at 35% 30%, #ffe9a8, #e6c15a 55%, #a97a1f 100%)',
@@ -386,7 +389,7 @@ export default function RouletteGame(): JSX.Element {
         data-bet={key}
         disabled={spinning}
         onClick={() => placeBet(key, selectedChip)}
-        className={cn(betCellClass, 'relative h-9 num disabled:cursor-not-allowed')}
+        className={cn(betCellClass, isMobile ? 'relative h-7 num text-[10px] disabled:cursor-not-allowed' : 'relative h-9 num disabled:cursor-not-allowed')}
         style={{
           background: c === 'red' ? POCKET_FILL.red : '#12161f',
           borderColor: 'rgba(255,255,255,0.08)',
@@ -406,7 +409,7 @@ export default function RouletteGame(): JSX.Element {
         data-bet={betKey}
         disabled={spinning}
         onClick={() => placeBet(betKey, selectedChip)}
-        className={cn(betCellClass, 'relative h-10 disabled:cursor-not-allowed')}
+        className={cn(betCellClass, isMobile ? 'relative h-8 text-[10px] disabled:cursor-not-allowed' : 'relative h-10 disabled:cursor-not-allowed')}
         style={{
           background: 'var(--color-panel-2)',
           borderColor: 'var(--glass-line)',
@@ -649,7 +652,7 @@ export default function RouletteGame(): JSX.Element {
                 style={{
                   width: '32%',
                   height: '32%',
-                  fontSize: 20,
+                  fontSize: isMobile ? 15 : 20,
                   color: spinning ? 'var(--color-text)' : resultColor === 'red' ? 'var(--color-red)' : resultColor === 'green' ? 'var(--color-green)' : 'var(--color-text)',
                   background: 'radial-gradient(circle at 35% 30%, #3a4258 0%, #1a2032 55%, #0c0f18 100%)',
                   boxShadow:
@@ -687,38 +690,38 @@ export default function RouletteGame(): JSX.Element {
               size in fractions means cells compress on a narrow viewport
               instead of overflowing. Capped + centered so it doesn't stretch
               into oddly huge cells on a very wide main panel either. */}
-          <div id="board" className="rt-board mx-auto flex w-full max-w-[760px] gap-1.5">
+          <div className={cn('rt-board mx-auto flex w-full max-w-[760px]', isMobile ? 'gap-1' : 'gap-1.5')} id="board">
             <button
               type="button"
               data-bet="n:0"
               disabled={spinning}
               onClick={() => placeBet('n:0', selectedChip)}
-              className={cn(betCellClass, 'relative w-10 flex-none rounded-[6px] disabled:cursor-not-allowed')}
+              className={cn(betCellClass, isMobile ? 'relative w-7 flex-none rounded-[6px] text-[10px] disabled:cursor-not-allowed' : 'relative w-10 flex-none rounded-[6px] disabled:cursor-not-allowed')}
               style={{ background: POCKET_FILL.green, borderColor: 'rgba(255,255,255,0.1)', color: '#eafff5' }}
             >
               0{chipBadge('n:0')}
             </button>
 
-            <div className="rt-board-main flex flex-1 flex-col gap-1.5 min-w-0">
-              <div className="grid grid-cols-12 gap-1.5">
+            <div className={cn('rt-board-main flex flex-1 flex-col min-w-0', isMobile ? 'gap-1' : 'gap-1.5')}>
+              <div className={cn('grid grid-cols-12', isMobile ? 'gap-1' : 'gap-1.5')}>
                 {TOP.map((n) => <NumCell key={n} n={n} />)}
                 {MID.map((n) => <NumCell key={n} n={n} />)}
                 {BOT.map((n) => <NumCell key={n} n={n} />)}
               </div>
 
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className={cn('grid grid-cols-3', isMobile ? 'gap-1' : 'gap-1.5')}>
                 <OutsideCell betKey="c1" label="2:1" />
                 <OutsideCell betKey="c2" label="2:1" />
                 <OutsideCell betKey="c3" label="2:1" />
               </div>
 
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className={cn('grid grid-cols-3', isMobile ? 'gap-1' : 'gap-1.5')}>
                 <OutsideCell betKey="d1" label="1st 12" />
                 <OutsideCell betKey="d2" label="2nd 12" />
                 <OutsideCell betKey="d3" label="3rd 12" />
               </div>
 
-              <div className="grid grid-cols-6 gap-1.5">
+              <div className={cn('grid grid-cols-6', isMobile ? 'gap-1' : 'gap-1.5')}>
                 <OutsideCell betKey="low" label="1-18" />
                 <OutsideCell betKey="even" label="EVEN" />
                 <OutsideCell

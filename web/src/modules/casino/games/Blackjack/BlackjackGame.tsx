@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
-import { GameLayout, Panel, PageHead, Button } from '@/platform/ui'
+import { GameLayout, Panel, PageHead, Button, cn } from '@/platform/ui'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 import { Reveal } from '@/platform/motion'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt } from '@/platform/money/format'
@@ -217,6 +218,7 @@ export default function BlackjackGame() {
   // Double only allowed on the opening two cards with funds available —
   // `balance` already reflects the stake deducted at deal() (js/games/blackjack.js:200).
   const canDouble = active && player.length === 2 && balance >= wagerRef.current
+  const isMobile = useIsMobile()
 
   return (
     <div>
@@ -228,7 +230,7 @@ export default function BlackjackGame() {
 
       <GameLayout>
         <Panel className="min-w-0">
-          <Felt className="flex flex-col justify-center gap-4 min-h-[440px]">
+          <Felt className={cn('flex flex-col justify-center gap-4', isMobile ? 'min-h-[280px]' : 'min-h-[440px]')}>
             <div className="hand-row">
               <div className="hand-label flex items-center justify-center gap-3 text-sm text-muted mb-3">
                 <span>Dealer</span>
@@ -236,7 +238,13 @@ export default function BlackjackGame() {
                   {dealerScoreText}
                 </span>
               </div>
-              <div className="cards flex flex-wrap justify-center gap-3 min-h-[136px]" id="dealerCards">
+              <div
+                className={cn(
+                  'cards flex flex-wrap justify-center gap-3',
+                  isMobile ? 'min-h-[80px]' : 'min-h-[136px]',
+                )}
+                id="dealerCards"
+              >
                 {/* key={i} is array-index-stable across the hole-card reveal:
                     dealer.length never changes when hideHole flips false, so
                     this Reveal/Card at i===1 stays mounted and only its
@@ -264,7 +272,13 @@ export default function BlackjackGame() {
                   {playerScoreText}
                 </span>
               </div>
-              <div className="cards flex flex-wrap justify-center gap-3 min-h-[136px]" id="playerCards">
+              <div
+                className={cn(
+                  'cards flex flex-wrap justify-center gap-3',
+                  isMobile ? 'min-h-[80px]' : 'min-h-[136px]',
+                )}
+                id="playerCards"
+              >
                 {player.map((c, i) => (
                   <Reveal key={i} as="div" preset="scaleIn" duration={0.22}>
                     <Card rank={c.rank} suit={c.suit} size="lg" />

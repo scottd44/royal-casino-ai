@@ -9,6 +9,7 @@ import BetField, { useBetRef, readBet } from '../../components/BetField'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { money, fmt } from '@/platform/money/format'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
    Rock Paper Scissors — ported from js/games/rps.js.
@@ -84,6 +85,7 @@ const TONE_COLOR: Record<Tone, string | undefined> = {
 }
 
 export default function RPSGame() {
+  const isMobile = useIsMobile()
   const betRef = useBetRef()
 
   const placeBet = useWalletStore((s) => s.placeBet)
@@ -241,8 +243,8 @@ export default function RPSGame() {
           <div
             className="rps-stage relative flex flex-col rounded-[20px] border overflow-hidden"
             style={{
-              minHeight: 440,
-              padding: '30px 24px 26px',
+              minHeight: isMobile ? 320 : 440,
+              padding: isMobile ? '18px 14px 16px' : '30px 24px 26px',
               background:
                 'radial-gradient(120% 130% at 50% -10%, color-mix(in srgb, var(--color-gold) 7%, var(--color-panel-2)) 0%, var(--color-panel) 55%, var(--color-bg-1) 100%)',
               borderColor:
@@ -257,7 +259,7 @@ export default function RPSGame() {
             }}
           >
             <div className="rps-readout flex flex-col items-center shrink-0">
-              <div className="cf-mult num text-center text-3xl font-semibold text-gold" id="rpsMultBig">
+              <div className={`cf-mult num text-center font-semibold text-gold ${isMobile ? 'text-xl' : 'text-3xl'}`} id="rpsMultBig">
                 <AnimatedNumber value={mult} format={(n) => `${n.toFixed(2)}×`} />
               </div>
 
@@ -291,7 +293,7 @@ export default function RPSGame() {
                   background: 'color-mix(in srgb, var(--glass) 60%, var(--color-bg-1))',
                   borderColor: 'var(--glass-line)',
                   boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.4), inset 0 -1px 0 rgba(255,255,255,0.03)',
-                  padding: '16px 18px',
+                  padding: isMobile ? '10px 12px' : '16px 18px',
                 }}
               >
                 {/* The connecting rail — a faint horizontal line every node
@@ -314,8 +316,8 @@ export default function RPSGame() {
                       key={`you-${throwIdRef.current}`}
                       id="rpsYou"
                       icon={youRef.current !== null ? MOVE_ICON[youRef.current] : null}
-                      iconSize={32}
-                      boxSize={78}
+                      iconSize={isMobile ? 22 : 32}
+                      boxSize={isMobile ? 54 : 78}
                       dir={-1}
                       tone={resultTone}
                       empty={<span className="text-faint text-base">–</span>}
@@ -335,8 +337,8 @@ export default function RPSGame() {
                       key={`house-${throwIdRef.current}`}
                       id="rpsHouse"
                       icon={houseRef.current !== null ? MOVE_ICON[houseRef.current] : null}
-                      iconSize={26}
-                      boxSize={64}
+                      iconSize={isMobile ? 18 : 26}
+                      boxSize={isMobile ? 46 : 64}
                       dir={1}
                       delay={0.1}
                       tone={resultTone}
@@ -411,10 +413,10 @@ export default function RPSGame() {
                   data-move={i}
                   variant="blue"
                   className="rps-move flex-col gap-1.5"
-                  style={{ padding: 14 }}
+                  style={{ padding: isMobile ? 8 : 14 }}
                   onClick={() => throwMove(i as Move)}
                 >
-                  <Icon name={icon} size={22} />
+                  <Icon name={icon} size={isMobile ? 18 : 22} />
                   <span className="rps-btn-label">{MOVES[i]}</span>
                 </Button>
               ))}
@@ -434,7 +436,7 @@ export default function RPSGame() {
             </Button>
           )}
 
-          <div className="stat-grid grid grid-cols-2 gap-2 mt-4">
+          <div className={`stat-grid grid grid-cols-2 mt-4 ${isMobile ? 'gap-1.5' : 'gap-2'}`}>
             <Stat k="Streak" v={<AnimatedNumber value={streak} id="rpsStreak" />} />
             <Stat
               k="Cash out"

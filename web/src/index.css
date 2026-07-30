@@ -105,6 +105,43 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ============================================================
+   Mobile chrome — shrinks the shared shell/panel/heading scale that every
+   game and the Lobby inherit for free. Deliberately UNLAYERED (same trick
+   Lobby.tsx's own comment documents for `.glass`): Tailwind's utilities
+   live in `@layer utilities`, and per the cascade-layers spec any unlayered
+   rule beats a layered one regardless of selector specificity or source
+   order. So `.panel`/`.app-content`/`.page-title` here override the `p-5`,
+   `px-5 py-6`, `text-2xl`/`text-[40px]` utility classes every caller already
+   has, without touching a single component file. `.page-title`/`.page-sub`
+   are shared verbatim between PageHead (platform/ui/Panel.tsx) and the
+   Lobby's own hero, so this one rule shrinks both.
+   ============================================================ */
+@media (max-width: 768px) {
+  :root {
+    --topbar-h: 52px;
+    --sbw: 260px;
+  }
+  .app-content {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+  .panel {
+    padding: 14px;
+  }
+  .game-layout {
+    gap: 14px;
+  }
+  .page-title {
+    font-size: 22px;
+  }
+  .page-sub {
+    font-size: 12px;
+  }
+}
+
 /* Themed scrollbars — default browser scrollbars are white/grey and clash
    with the dark palette on every scrollable surface (.app-main, sidebar nav,
    the AI Lab drawer/log, modals). Firefox via scrollbar-color, WebKit via

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { JSX } from 'react'
-import { GameLayout, Panel, PageHead, Button, Stat } from '@/platform/ui'
+import { GameLayout, Panel, PageHead, Button, Stat, cn } from '@/platform/ui'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 import { Reveal } from '@/platform/motion'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt } from '@/platform/money/format'
@@ -255,6 +256,7 @@ export default function BaccaratGame(): JSX.Element {
 
   const bet = readBet(betRef)
   const profitText = bet > 0 ? `+${fmt(Math.floor(bet * SIDE_MULT[side]))}` : '—'
+  const isMobile = useIsMobile()
 
   return (
     <div>
@@ -267,7 +269,12 @@ export default function BaccaratGame(): JSX.Element {
       <GameLayout>
         <Panel className="min-w-0">
           <Felt>
-            <div className="bac-hands flex flex-wrap justify-center items-start gap-6 sm:gap-8">
+            <div
+              className={cn(
+                'bac-hands flex flex-wrap justify-center items-start',
+                isMobile ? 'gap-3' : 'gap-6 sm:gap-8',
+              )}
+            >
               <div className="bac-hand text-center">
                 <div className="hand-label flex items-center justify-center gap-2 text-sm text-muted mb-2">
                   <span>Player</span>
@@ -275,7 +282,13 @@ export default function BaccaratGame(): JSX.Element {
                     {pScoreText}
                   </span>
                 </div>
-                <div className="cards flex flex-wrap justify-center gap-2 min-h-[136px] max-w-[340px]" id="bacP">
+                <div
+                  className={cn(
+                    'cards flex flex-wrap justify-center gap-2 max-w-[340px]',
+                    isMobile ? 'min-h-[80px]' : 'min-h-[136px]',
+                  )}
+                  id="bacP"
+                >
                   {/* No faceDown prop is ever passed to Card here — Baccarat
                       never hides a dealt card — so there's no toggle that
                       could race a `key={i}` remount; each i only ever
@@ -288,7 +301,7 @@ export default function BaccaratGame(): JSX.Element {
                 </div>
               </div>
 
-              <div className="bac-vs text-muted font-bold text-sm mt-8 shrink-0">VS</div>
+              <div className={cn('bac-vs text-muted font-bold text-sm shrink-0', isMobile ? 'mt-6' : 'mt-8')}>VS</div>
 
               <div className="bac-hand text-center">
                 <div className="hand-label flex items-center justify-center gap-2 text-sm text-muted mb-2">
@@ -297,7 +310,13 @@ export default function BaccaratGame(): JSX.Element {
                     {bScoreText}
                   </span>
                 </div>
-                <div className="cards flex flex-wrap justify-center gap-2 min-h-[136px] max-w-[340px]" id="bacB">
+                <div
+                  className={cn(
+                    'cards flex flex-wrap justify-center gap-2 max-w-[340px]',
+                    isMobile ? 'min-h-[80px]' : 'min-h-[136px]',
+                  )}
+                  id="bacB"
+                >
                   {shownB.map((c, i) => (
                     <Reveal key={i} as="div" preset="scaleIn" duration={0.22}>
                       <Card rank={c.rank} suit={c.suit} size="lg" />

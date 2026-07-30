@@ -9,6 +9,7 @@ import BetField, { useBetRef, readBet } from '../../components/BetField'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money, randInt, pick } from '@/platform/money/format'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
    Hilo — ported from js/games/hilo.js. Higher/lower card guessing with a
@@ -93,6 +94,7 @@ const TONE_COLOR: Record<MsgTone, string> = {
 }
 
 export default function HiloGame(): JSX.Element {
+  const isMobile = useIsMobile()
   const betRef = useBetRef()
 
   const [current, setCurrent] = useState<HiloCard | null>(null)
@@ -220,7 +222,7 @@ export default function HiloGame(): JSX.Element {
       <GameLayout>
         <Panel className="min-w-0">
           <Felt>
-            <div className="flex flex-col items-center justify-center min-h-[240px] py-2 gap-4">
+            <div className={`flex flex-col items-center justify-center py-2 ${isMobile ? 'min-h-[160px] gap-2' : 'min-h-[240px] gap-4'}`}>
               <div id="hiloCard" className="cards flex justify-center">
                 <Reveal key={cardKey} preset="scaleIn" duration={0.25}>
                   {current ? (
@@ -251,7 +253,7 @@ export default function HiloGame(): JSX.Element {
                 .map((h, i) => (
                   <span
                     key={i}
-                    className="px-2 py-1 rounded-md text-xs num border"
+                    className={`rounded-md num border ${isMobile ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-xs'}`}
                     style={{
                       borderColor: 'var(--glass-line)',
                       background:
@@ -311,7 +313,7 @@ export default function HiloGame(): JSX.Element {
             </Button>
           </div>
 
-          <div className="stat-grid grid grid-cols-2 gap-2">
+          <div className={`stat-grid grid grid-cols-2 ${isMobile ? 'gap-1.5' : 'gap-2'}`}>
             <Stat
               k="Multiplier"
               v={<AnimatedNumber value={runMult} format={(n) => `${n.toFixed(2)}×`} id="runMult" />}

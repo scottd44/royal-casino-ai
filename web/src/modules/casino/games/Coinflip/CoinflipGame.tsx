@@ -7,6 +7,7 @@ import BetField, { useBetRef, readBet } from '../../components/BetField'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money } from '@/platform/money/format'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
    Coinflip — ported from js/games/coinflip.js.
@@ -62,6 +63,7 @@ type Tone = 'idle' | 'win' | 'lose'
 type HistEntry = { id: number; win: boolean; faces: (0 | 1)[] }
 
 export default function CoinflipGame() {
+  const isMobile = useIsMobile()
   const betRef = useBetRef()
 
   // Round truth lives in refs, exactly like HoldemGame's tblRef/stacksRef —
@@ -207,7 +209,9 @@ export default function CoinflipGame() {
               Wheel's stage: layered gradients + inset shadows for real
               depth, a border/glow that flushes to the outcome colour. */}
           <div
-            className="relative rounded-2xl px-6 pt-6 pb-5 text-center overflow-hidden"
+            className={`relative rounded-2xl text-center overflow-hidden ${
+              isMobile ? 'px-3 pt-4 pb-3' : 'px-6 pt-6 pb-5'
+            }`}
             style={{
               background:
                 'radial-gradient(120% 140% at 50% -10%, color-mix(in srgb, #10182c 88%, transparent), var(--color-panel-2) 72%)',
@@ -223,7 +227,7 @@ export default function CoinflipGame() {
                 until the first flip lands. */}
             <div
               id="cfCoins"
-              className="flex gap-4 justify-center py-3"
+              className={`flex justify-center py-3 ${isMobile ? 'gap-2' : 'gap-4'}`}
               style={{ perspective: 800 }}
             >
               {(faces ?? Array(coins).fill(null)).map((f, i) => (
@@ -234,13 +238,13 @@ export default function CoinflipGame() {
                   duration={0.3}
                   delay={i * 0.08}
                 >
-                  <CoinFace face={f as 0 | 1 | null} spin={f != null} />
+                  <CoinFace face={f as 0 | 1 | null} spin={f != null} size={isMobile ? 54 : 76} />
                 </Reveal>
               ))}
             </div>
 
             <div
-              className="text-center num text-4xl font-semibold my-2"
+              className={`text-center num font-semibold my-2 ${isMobile ? 'text-2xl' : 'text-4xl'}`}
               style={{ color: 'var(--color-gold)', textShadow: '0 0 22px var(--glow-gold)' }}
             >
               {mult.toFixed(2)}×
@@ -265,7 +269,7 @@ export default function CoinflipGame() {
               {hist.map((h) => (
                 <Reveal key={h.id} as="span" preset="scaleIn" duration={0.22}>
                   <span
-                    className="num text-xs px-2 py-1 rounded-md tracking-wide border"
+                    className={`num rounded-md tracking-wide border ${isMobile ? 'text-[10px] px-1.5 py-0.5' : 'text-xs px-2 py-1'}`}
                     style={{
                       background: h.win
                         ? 'color-mix(in srgb, var(--color-green) 16%, transparent)'
@@ -371,7 +375,7 @@ export default function CoinflipGame() {
    other flip/spin in this app degrades under reduced motion / a
    backgrounded tab (motionPolicy() read once, not reactively, matching
    Reveal's own latch-at-mount rule). */
-function CoinFace({ face, spin }: { face: 0 | 1 | null; spin: boolean }) {
+function CoinFace({ face, spin, size = 76 }: { face: 0 | 1 | null; spin: boolean; size?: number }) {
   const blank = face == null
   const heads = face === 1
   const animated = spin && shouldAnimate()
@@ -393,8 +397,8 @@ function CoinFace({ face, spin }: { face: 0 | 1 | null; spin: boolean }) {
     <motion.div
       className="flex items-center justify-center rounded-full num text-2xl font-bold shrink-0"
       style={{
-        width: 76,
-        height: 76,
+        width: size,
+        height: size,
         background,
         color: glyphColor,
         textShadow: glyphShadow,

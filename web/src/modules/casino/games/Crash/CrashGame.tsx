@@ -6,6 +6,7 @@ import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { money } from '@/platform/money/format'
 import { toast } from '@/platform/ui/toast'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
    Crash — ported from js/games/crash.js. The multiplier climbs from 1.00×;
@@ -116,6 +117,7 @@ const AUTO_PRESETS: { label: string; value: number }[] = [
 ]
 
 export default function CrashGame() {
+  const isMobile = useIsMobile()
   const betRef = useBetRef()
   const autoRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -456,7 +458,9 @@ export default function CrashGame() {
           <div
             id="crashStage"
             data-state={stage}
-            className="crash-stage relative h-72 rounded-[14px] overflow-hidden flex items-center justify-center transition-[box-shadow,border-color] duration-500"
+            className={`crash-stage relative rounded-[14px] overflow-hidden flex items-center justify-center transition-[box-shadow,border-color] duration-500 ${
+              isMobile ? 'h-48' : 'h-72'
+            }`}
             style={{
               background:
                 stage === 'crashed'
@@ -484,7 +488,9 @@ export default function CrashGame() {
               <div
                 ref={multElRef}
                 id="crashMult"
-                className="crash-mult num text-7xl font-extrabold tabular-nums transition-transform duration-150"
+                className={`crash-mult num font-extrabold tabular-nums transition-transform duration-150 ${
+                  isMobile ? 'text-4xl' : 'text-7xl'
+                }`}
                 style={{
                   color: 'var(--color-muted)',
                   textShadow:
@@ -532,7 +538,7 @@ export default function CrashGame() {
               {[...history].reverse().map((r) => (
                 <Reveal key={r.id} as="span" preset="scaleIn" duration={0.22}>
                   <span
-                    className={`pill num text-xs px-2 py-1 rounded-md ${r.mult >= 2 ? 'win' : 'lose'}`}
+                    className={`pill num rounded-md ${isMobile ? 'text-[10px] px-1.5 py-0.5' : 'text-xs px-2 py-1'} ${r.mult >= 2 ? 'win' : 'lose'}`}
                     style={{
                       background:
                         r.mult >= 2
@@ -567,14 +573,14 @@ export default function CrashGame() {
               className="input w-full rounded-[10px] border px-3 py-2 text-text outline-none"
               style={{ borderColor: 'var(--glass-line)', background: 'var(--color-panel-2)' }}
             />
-            <div className="bet-row grid grid-cols-4 gap-2 mt-2">
+            <div className={`bet-row grid grid-cols-4 mt-2 ${isMobile ? 'gap-1.5' : 'gap-2'}`}>
               {AUTO_PRESETS.map((p) => (
                 <Button
                   key={p.label}
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="text-muted"
+                  className={isMobile ? 'text-muted text-xs px-1' : 'text-muted'}
                   onClick={() => applyAutoPreset(p.value)}
                 >
                   {p.label}
@@ -583,7 +589,7 @@ export default function CrashGame() {
             </div>
           </div>
 
-          <div className="stat-grid grid grid-cols-2 gap-2">
+          <div className={`stat-grid grid grid-cols-2 ${isMobile ? 'gap-1.5' : 'gap-2'}`}>
             <Stat k="If cashed now" v={<span ref={potPayRef} id="potPay">—</span>} />
             <Stat k="Last round" v={<span id="lastRound">{lastRound}</span>} />
           </div>

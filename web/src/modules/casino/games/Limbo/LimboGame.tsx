@@ -6,6 +6,7 @@ import BetField, { useBetRef, readBet } from '../../components/BetField'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt } from '@/platform/money/format'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
    Limbo — ported from js/games/limbo.js.
@@ -77,6 +78,7 @@ type Roll = { id: number; result: number; win: boolean }
 const PRESETS = [1.5, 2, 10, 100]
 
 export default function LimboGame() {
+  const isMobile = useIsMobile()
   const betRef = useBetRef()
   const targetRef = useRef<HTMLInputElement>(null)
   const rollingRef = useRef(false)
@@ -264,9 +266,9 @@ export default function LimboGame() {
               glow: layered gradients + inset shadow for depth, a border/glow
               that flushes to the live climb tone, never a flat text block. */}
           <div
-            className={`limbo-console relative rounded-2xl px-6 py-7 text-center overflow-hidden ${
-              rolling ? 'limbo-tension' : ''
-            }`}
+            className={`limbo-console relative rounded-2xl text-center overflow-hidden ${
+              isMobile ? 'px-3 py-4' : 'px-6 py-7'
+            } ${rolling ? 'limbo-tension' : ''}`}
             style={{
               background:
                 'radial-gradient(120% 140% at 50% -10%, color-mix(in srgb, #10182c 88%, transparent), var(--color-panel-2) 72%)',
@@ -316,7 +318,7 @@ export default function LimboGame() {
                       : {}
               }
               transition={{ duration: DUR.reveal, ease: EASE_OUT }}
-              className="dice-roll-num num text-6xl font-semibold"
+              className={`dice-roll-num num font-semibold ${isMobile ? 'text-4xl' : 'text-6xl'}`}
               id="limboNum"
               style={{
                 color: liveColor,
@@ -389,7 +391,7 @@ export default function LimboGame() {
               {[...history].reverse().map((r) => (
                 <Reveal key={r.id} as="span" preset="scaleIn" duration={0.22}>
                   <span
-                    className={`pill num text-xs px-2 py-1 rounded-md ${r.win ? 'win' : 'lose'}`}
+                    className={`pill num rounded-md ${isMobile ? 'text-[10px] px-1.5 py-0.5' : 'text-xs px-2 py-1'} ${r.win ? 'win' : 'lose'}`}
                     style={{
                       background: r.win
                         ? 'color-mix(in srgb, var(--color-green) 16%, transparent)'
@@ -424,14 +426,14 @@ export default function LimboGame() {
               onChange={(e) => onTargetInput(e.target.value)}
               style={{ borderColor: 'var(--glass-line)', background: 'var(--color-panel-2)' }}
             />
-            <div className="bet-row grid grid-cols-4 gap-2 mt-2">
+            <div className={`bet-row grid grid-cols-4 mt-2 ${isMobile ? 'gap-1.5' : 'gap-2'}`}>
               {PRESETS.map((p) => (
                 <Button
                   key={p}
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="text-muted"
+                  className={isMobile ? 'text-muted text-xs px-1' : 'text-muted'}
                   onClick={() => applyPreset(p)}
                 >
                   {p}×
@@ -446,7 +448,7 @@ export default function LimboGame() {
               suspenders), but the id lives on the AnimatedNumber node, not
               also on Stat's wrapper div, so there's exactly one
               #winChance/#mult/#profit in the DOM. */}
-          <div className="stat-grid grid grid-cols-3 gap-2">
+          <div className={`stat-grid grid grid-cols-3 ${isMobile ? 'gap-1.5' : 'gap-2'}`}>
             <Stat
               k="Win chance"
               v={<AnimatedNumber value={winChance} format={(n) => `${n.toFixed(2)}%`} id="winChance" />}

@@ -36,11 +36,13 @@ import { useLayoutModeStore } from '@/platform/layout/layoutModeStore'
    ============================================================ */
 export default function AppShell({ children }: { children: ReactNode }) {
   const [userCollapsed, setUserCollapsed] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const isMobile = useIsMobile()
-  // Phones always get the icon-only rail — [data-nav] stays mounted and
-  // visible (Sidebar.tsx's agent contract), just narrower, same as the
-  // desktop collapsed state. Desktop keeps its own manual toggle.
-  const collapsed = isMobile || userCollapsed
+  // Desktop keeps its manual icon-only/expanded toggle. Phones get no
+  // reserved rail at all (see gridTemplateColumns below) — the sidebar
+  // becomes a full-width slide-in drawer instead (Sidebar.tsx `mobile` prop),
+  // so `collapsed` only matters on desktop.
+  const collapsed = userCollapsed
   const balance = useWalletStore((s) => s.balance)
   const layoutMode = useLayoutModeStore((s) => s.mode)
   const setLayoutMode = useLayoutModeStore((s) => s.setMode)
@@ -63,11 +65,33 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <div
       className="app-shell grid h-[100dvh]"
       style={{
-        gridTemplateColumns: `${collapsed ? 'var(--sbw-min)' : 'var(--sbw)'} 1fr`,
+        gridTemplateColumns: isMobile ? '1fr' : `${collapsed ? 'var(--sbw-min)' : 'var(--sbw)'} 1fr`,
         transition: 'grid-template-columns 0.28s var(--ease)',
       }}
     >
-      <Sidebar collapsed={collapsed} />
+      <Sidebar
+        collapsed={collapsed}
+        mobile={isMobile}
+        mobileOpen={mobileNavOpen}
+        onNavigate={() => setMobileNavOpen(false)}
+      />
+
+      {/* Backdrop for the mobile drawer — a sibling of <main>, not inside its
+          scroll region, same reasoning as LabDrawer/LabHud below. Only ever
+          mounted on mobile, and only visible while the drawer is open. */}
+      {isMobile && (
+        <div
+          aria-hidden
+          onClick={() => setMobileNavOpen(false)}
+          className="fixed inset-0 z-20"
+          style={{
+            background: 'rgba(5, 7, 12, 0.6)',
+            opacity: mobileNavOpen ? 1 : 0,
+            pointerEvents: mobileNavOpen ? 'auto' : 'none',
+            transition: 'opacity 0.2s var(--ease)',
+          }}
+        />
+      )}
 
       <main
         className="app-main h-full overflow-y-auto overflow-x-hidden min-w-0"
@@ -87,10 +111,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
             type="button"
             id="sbCollapse"
             aria-label="Toggle sidebar"
-            onClick={() => setUserCollapsed((c) => !c)}
+            onClick={() => (isMobile ? setMobileNavOpen((o) => !o) : setUserCollapsed((c) => !c))}
             className="p-2 rounded-[10px] text-muted hover:text-text hover:bg-white/5 transition-colors"
           >
-            <Icon name="panel-left" size={18} />
+            <Icon name={isMobile ? 'menu' : 'panel-left'} size={18} />
           </button>
 
           {/*  #aiStatus is written directly by agent-ui.js setStatus().
@@ -110,7 +134,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] text-xs font-semibold text-muted hover:text-text hover:bg-white/5 transition-colors"
           >
             <Icon name={layoutMode === 'mobile' ? 'smartphone' : 'monitor'} size={15} />
-            {layoutMode === 'auto' ? 'Auto' : layoutMode === 'mobile' ? 'Phone' : 'Desktop'}
+            {!isMobile && (layoutMode === 'auto' ? 'Auto' : layoutMode === 'mobile' ? 'Phone' : 'Desktop')}
           </button>
 
           <div className="num text-gold text-sm shrink-0" title="Balance">
@@ -118,7 +142,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <div className="px-5 py-6">{children}</div>
+        <div className="app-content px-5 py-6">{children}</div>
       </main>
 
       {/* Fixed-position siblings of <main>, OUTSIDE .app-main's scroll

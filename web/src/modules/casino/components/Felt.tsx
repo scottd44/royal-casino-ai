@@ -1,5 +1,6 @@
 import type { CSSProperties, JSX, ReactNode } from 'react'
 import { cn } from '@/platform/ui'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
    Felt — the green-table surface Wave 4's card games (Blackjack, Video
@@ -26,9 +27,10 @@ export interface FeltProps {
 }
 
 export function Felt({ children, className, style }: FeltProps): JSX.Element {
+  const isMobile = useIsMobile()
   return (
     <div
-      className={cn('felt rounded-[20px] border p-5', className)}
+      className={cn('felt rounded-[20px] border', isMobile ? 'p-3' : 'p-5', className)}
       style={{
         borderColor: 'var(--glass-line)',
         background:

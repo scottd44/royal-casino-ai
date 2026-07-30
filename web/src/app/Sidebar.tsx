@@ -36,8 +36,29 @@ import { useLabUiStore } from '@/modules/casino/lab/labUiStore'
 
 type Group = { key: string; label: string; icon: IconName; games: GameMeta[] }
 
-export default function Sidebar({ collapsed }: { collapsed: boolean }) {
+export default function Sidebar({
+  collapsed: collapsedProp,
+  mobile = false,
+  mobileOpen = false,
+  onNavigate,
+}: {
+  collapsed: boolean
+  /** Phones render the rail as a fixed slide-in drawer instead of a grid
+   *  cell — see AppShell.tsx. Every [data-nav] button below is still
+   *  mounted and rendered exactly the same either way (rule 4 above); only
+   *  the wrapping <aside>'s position/transform changes. */
+  mobile?: boolean
+  mobileOpen?: boolean
+  /** Closes the mobile drawer after a real navigation. Never called on
+   *  desktop, where the rail has nothing to close. */
+  onNavigate?: () => void
+}) {
   const setDrawerOpen = useLabUiStore((s) => s.setDrawerOpen)
+
+  // The mobile drawer is a full-width overlay, not an icon-only rail — the
+  // desktop `collapsed` preference doesn't apply to it, only `mobileOpen`
+  // (visibility) does.
+  const collapsed = mobile ? false : collapsedProp
 
   /** Closed groups, by key. Empty set == everything open, which is the
    *  default: a rail that starts folded up hides the whole roster. */
@@ -63,6 +84,13 @@ export default function Sidebar({ collapsed }: { collapsed: boolean }) {
     return out
   }, [])
 
+  /** Every nav click on the mobile drawer also closes it — desktop's
+   *  `onNavigate` is undefined so this is a no-op there. */
+  function go(id: string) {
+    navigate(id)
+    onNavigate?.()
+  }
+
   function toggle(key: string) {
     setClosed((prev) => {
       const next = new Set(prev)
@@ -74,12 +102,25 @@ export default function Sidebar({ collapsed }: { collapsed: boolean }) {
 
   return (
     <aside
-      className="sidebar h-full min-h-0 flex flex-col border-r overflow-hidden"
-      style={{ borderColor: 'var(--glass-line)', background: 'var(--glass-panel)' }}
+      className={
+        mobile
+          ? 'sidebar fixed inset-y-0 left-0 z-30 flex flex-col border-r overflow-hidden w-[260px] max-w-[80vw]'
+          : 'sidebar h-full min-h-0 flex flex-col border-r overflow-hidden'
+      }
+      style={{
+        borderColor: 'var(--glass-line)',
+        background: 'var(--glass-panel)',
+        ...(mobile
+          ? {
+              transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
+              transition: 'transform 0.24s var(--ease)',
+            }
+          : undefined),
+      }}
     >
       <button
         type="button"
-        onClick={() => navigate('')}
+        onClick={() => go('')}
         className="flex items-center gap-2 px-4 shrink-0 text-left hover:opacity-80 transition-opacity"
         style={{ height: 'var(--topbar-h)' }}
         title="Back to the lobby"
@@ -96,7 +137,7 @@ export default function Sidebar({ collapsed }: { collapsed: boolean }) {
         <button
           type="button"
           data-nav=""
-          onClick={() => navigate('')}
+          onClick={() => go('')}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-muted hover:text-text hover:bg-white/5 transition-colors"
           title="Lobby"
         >
@@ -185,7 +226,7 @@ export default function Sidebar({ collapsed }: { collapsed: boolean }) {
                       key={g.id}
                       type="button"
                       data-nav={g.id}
-                      onClick={() => navigate(g.id)}
+                      onClick={() => go(g.id)}
                       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-muted hover:text-text hover:bg-white/5 transition-colors"
                       title={g.name}
                     >

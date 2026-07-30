@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { GameLayout, Panel, PageHead, Button, Stat } from '@/platform/ui'
+import { GameLayout, Panel, PageHead, Button, Stat, cn } from '@/platform/ui'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 import { Reveal } from '@/platform/motion'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
@@ -327,6 +328,8 @@ export default function HoldemGame() {
   const equityPct =
     tbl && snap.awaitingHuman ? Math.round(equity(snap.hole, snap.community, Math.max(1, tbl.contenders().length - 1), 120) * 100) : null
 
+  const isMobile = useIsMobile()
+
   return (
     <div>
       <PageHead title="Texas Hold'em" sub="No-limit poker against three bots." icon="diamond" />
@@ -339,7 +342,7 @@ export default function HoldemGame() {
                 mount (per-seat identity never changes across a session,
                 same as the original stack/name row), so they're plain
                 styled divs, never wrapped in Reveal. */}
-            <div className="relative mx-auto h-[330px] sm:h-[360px] max-w-[520px]">
+            <div className={cn('relative mx-auto max-w-[520px]', isMobile ? 'h-[260px]' : 'h-[330px] sm:h-[360px]')}>
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none px-2">
                 <div className="num text-gold text-xl" id="hcPot">
                   {money(snap.pot)}
@@ -347,7 +350,7 @@ export default function HoldemGame() {
                 <div className="text-[11px] uppercase tracking-wide text-faint">
                   {snap.seated ? streetLabel : 'Sit down to play'}
                 </div>
-                <div className="flex gap-2 justify-center min-h-[80px] items-center">
+                <div className={cn('flex gap-2 justify-center items-center', isMobile ? 'min-h-[56px]' : 'min-h-[80px]')}>
                   {/* Each street's cards mount fresh — preflop -> flop adds 3,
                       then turn/river add one apiece — and the whole array
                       unmounts back to [] on the next hand. Genuine
@@ -376,7 +379,7 @@ export default function HoldemGame() {
                     <div
                       className="relative rounded-2xl border px-3 py-2 text-center transition-opacity duration-300"
                       style={{
-                        minWidth: 92,
+                        minWidth: isMobile ? 68 : 92,
                         borderColor: isTurn ? 'var(--color-gold)' : 'var(--glass-line)',
                         background: 'var(--glass)',
                         opacity: isFolded ? 0.4 : 1,
@@ -427,7 +430,7 @@ export default function HoldemGame() {
 
             <div className="mt-8 flex flex-col items-center gap-1.5">
               <div className="text-[11px] uppercase tracking-wide text-muted">Your hand</div>
-              <div className="flex gap-2 justify-center min-h-[92px] items-center">
+              <div className={cn('flex gap-2 justify-center items-center', isMobile ? 'min-h-[64px]' : 'min-h-[92px]')}>
                 {/* Dealt fresh at the top of each hand, unmounted (snap.hole ->
                     []) the moment the table resets — same genuine
                     mount/unmount case as the community cards above. */}

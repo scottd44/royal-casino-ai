@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { JSX } from 'react'
 import { GameLayout, Panel, PageHead, Button, Stat, cn } from '@/platform/ui'
 import { Reveal } from '@/platform/motion'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money } from '@/platform/money/format'
 import { toast } from '@/platform/ui/toast'
@@ -108,10 +109,13 @@ const TONE_COLOR: Record<ToastType, string> = {
  *  Sized to match the `lg` Card box (96x136) so the gap reads as a real
  *  third seat in the row rather than a small orphaned square between two
  *  now much-larger cards. */
-function GapSlot() {
+function GapSlot({ mobile }: { mobile: boolean }) {
   return (
     <div
-      className="rd-gap flex items-center justify-center w-24 h-[136px] rounded-[10px] border text-3xl text-muted"
+      className={cn(
+        'rd-gap flex items-center justify-center rounded-[10px] border text-muted',
+        mobile ? 'w-14 h-20 text-lg' : 'w-24 h-[136px] text-3xl',
+      )}
       style={{ borderColor: 'var(--glass-line)' }}
     >
       ?
@@ -299,6 +303,8 @@ export default function RedDogGame(): JSX.Element {
   const lastResultText =
     lastNet == null ? '—' : lastNet > 0 ? `+${fmt(lastNet)}` : lastNet < 0 ? `-${fmt(-lastNet)}` : 'push'
 
+  const isMobile = useIsMobile()
+
   return (
     <div>
       <PageHead
@@ -310,8 +316,11 @@ export default function RedDogGame(): JSX.Element {
       <GameLayout>
         <Panel className="min-w-0">
           <Felt>
-            <div className="flex flex-col items-center justify-center min-h-[260px] py-2">
-              <div className="cards rd-cards flex flex-wrap justify-center items-center gap-5" id="rdCards">
+            <div className={cn('flex flex-col items-center justify-center py-2', isMobile ? 'min-h-[160px]' : 'min-h-[260px]')}>
+              <div
+                className={cn('cards rd-cards flex flex-wrap justify-center items-center', isMobile ? 'gap-2' : 'gap-5')}
+                id="rdCards"
+              >
                 {c1 ? (
                   <Reveal key={`c1-${dealGenRef.current}`} as="div" preset="scaleIn" duration={0.25}>
                     <Card rank={c1.rank} suit={c1.suit} size="lg" />
@@ -325,10 +334,10 @@ export default function RedDogGame(): JSX.Element {
                       <Card rank={c3.rank} suit={c3.suit} size="lg" />
                     </Reveal>
                   ) : (
-                    <GapSlot />
+                    <GapSlot mobile={isMobile} />
                   )
                 ) : (
-                  <GapSlot />
+                  <GapSlot mobile={isMobile} />
                 )}
                 {c2 ? (
                   <Reveal key={`c2-${dealGenRef.current}`} as="div" preset="scaleIn" duration={0.25}>

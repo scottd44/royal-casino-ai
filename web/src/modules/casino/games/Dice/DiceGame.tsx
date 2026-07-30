@@ -6,6 +6,7 @@ import BetField, { useBetRef, readBet } from '../../components/BetField'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt } from '@/platform/money/format'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
    Dice — ported from js/games/dice.js.
@@ -40,6 +41,7 @@ const TICKS = 8
 type Roll = { id: number; roll: number; win: boolean }
 
 export default function DiceGame() {
+  const isMobile = useIsMobile()
   const betRef = useBetRef()
   const sliderRef = useRef<HTMLInputElement>(null)
   const rollingRef = useRef(false)
@@ -163,9 +165,9 @@ export default function DiceGame() {
               gradients + inset shadows for real depth, a border that flushes
               to the outcome colour, never a flat text block. */}
           <div
-            className={`dice-console relative rounded-2xl px-6 py-7 text-center overflow-hidden ${
-              rolling ? 'dice-tension' : ''
-            }`}
+            className={`dice-console relative rounded-2xl text-center overflow-hidden ${
+              isMobile ? 'px-3 py-4' : 'px-6 py-7'
+            } ${rolling ? 'dice-tension' : ''}`}
             style={{
               background:
                 'radial-gradient(120% 140% at 50% -10%, color-mix(in srgb, #10182c 88%, transparent), var(--color-panel-2) 72%)',
@@ -199,7 +201,7 @@ export default function DiceGame() {
             )}
 
             <div
-              className="dice-roll-num num text-7xl font-semibold relative"
+              className={`dice-roll-num num font-semibold relative ${isMobile ? 'text-4xl' : 'text-7xl'}`}
               id="rollNum"
               style={{
                 color: glowColor ?? 'var(--color-text)',
@@ -296,7 +298,7 @@ export default function DiceGame() {
               {[...history].reverse().map((r) => (
                 <Reveal key={r.id} as="span" preset="scaleIn" duration={0.22}>
                   <span
-                    className={`pill num text-xs px-2 py-1 rounded-md ${r.win ? 'win' : 'lose'}`}
+                    className={`pill num rounded-md ${isMobile ? 'text-[10px] px-1.5 py-0.5' : 'text-xs px-2 py-1'} ${r.win ? 'win' : 'lose'}`}
                     style={{
                       background: r.win
                         ? 'color-mix(in srgb, var(--color-green) 16%, transparent)'
@@ -350,7 +352,7 @@ export default function DiceGame() {
               contract-id guard runs (belt and suspenders), but the id actually
               lives on the AnimatedNumber node, not on Stat's wrapper div, so
               there's exactly one #winChance/#mult/#targetV/#profit in the DOM. */}
-          <div className="stat-grid grid grid-cols-2 gap-2">
+          <div className={`stat-grid grid grid-cols-2 ${isMobile ? 'gap-1.5' : 'gap-2'}`}>
             <Stat
               k="Win chance"
               tone="green"

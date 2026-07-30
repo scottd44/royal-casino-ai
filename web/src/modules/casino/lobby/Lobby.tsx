@@ -7,6 +7,7 @@ import type { IconName } from '@/platform/icons'
 import { Reveal, Stagger } from '@/platform/motion'
 import { useWalletStore } from '@/platform/money/walletStore'
 import { money } from '@/platform/money/format'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
    Lobby — Phase 4 UI remake (PHASE_4_UI_REMAKE_PLAN.md).
@@ -223,7 +224,7 @@ function SectionHead({
    component the shelf would read as the first row of the grid accidentally
    repeated rather than as a shelf.
    ------------------------------------------------------------ */
-function FavoriteTile({ g, index }: { g: GameMeta; index: number }) {
+function FavoriteTile({ g, index, isMobile }: { g: GameMeta; index: number; isMobile: boolean }) {
   const [hover, handlers] = useHoverState()
 
   return (
@@ -232,7 +233,7 @@ function FavoriteTile({ g, index }: { g: GameMeta; index: number }) {
       data-nav={g.id}
       onClick={() => navigate(g.id)}
       {...handlers}
-      className="relative w-full h-[188px] overflow-hidden text-left rounded-[18px] border flex flex-col justify-end"
+      className={`relative w-full ${isMobile ? 'h-[144px]' : 'h-[188px]'} overflow-hidden text-left rounded-[18px] border flex flex-col justify-end`}
       style={{
         borderColor: hover ? 'rgba(240, 194, 79, 0.72)' : 'rgba(240, 194, 79, 0.3)',
         background: 'linear-gradient(180deg, rgba(15, 20, 31, 0.96), rgba(10, 14, 22, 0.98))',
@@ -275,7 +276,7 @@ function FavoriteTile({ g, index }: { g: GameMeta; index: number }) {
           transition: `opacity 300ms ${EASE}, transform 480ms ${EASE}`,
         }}
       >
-        <Icon name={g.icon} size={112} strokeWidth={0.9} />
+        <Icon name={g.icon} size={isMobile ? 68 : 112} strokeWidth={0.9} />
       </span>
 
       {/* gold leaf along the top edge — the shelf's signature */}
@@ -290,14 +291,18 @@ function FavoriteTile({ g, index }: { g: GameMeta; index: number }) {
 
       {/* the lit medallion, sitting high so the name plate can breathe */}
       <span
-        className="absolute inset-x-0 top-[26px] flex justify-center"
+        className={`absolute inset-x-0 ${isMobile ? 'top-[18px]' : 'top-[26px]'} flex justify-center`}
         style={{
           transform: hover ? 'translateY(-5px) scale(1.06)' : 'none',
           transition: `transform 340ms ${EASE}`,
         }}
       >
         <span
-          className="flex items-center justify-center rounded-[18px] w-[58px] h-[58px]"
+          className={
+            isMobile
+              ? 'flex items-center justify-center rounded-[14px] w-[42px] h-[42px]'
+              : 'flex items-center justify-center rounded-[18px] w-[58px] h-[58px]'
+          }
           style={{
             color: g.accent,
             background: `linear-gradient(155deg, ${g.accent}4d, rgba(7, 10, 17, 0.72) 76%)`,
@@ -306,7 +311,7 @@ function FavoriteTile({ g, index }: { g: GameMeta; index: number }) {
         >
           <Icon
             name={g.icon}
-            size={26}
+            size={isMobile ? 19 : 26}
             strokeWidth={1.6}
             style={{ filter: `drop-shadow(0 0 12px ${g.accent})` }}
           />
@@ -375,7 +380,17 @@ function FavoriteTile({ g, index }: { g: GameMeta; index: number }) {
 /* ------------------------------------------------------------
    The grid tile. Art panel on top, name plate underneath.
    ------------------------------------------------------------ */
-function GameCard({ g, index, favorite }: { g: GameMeta; index: number; favorite: boolean }) {
+function GameCard({
+  g,
+  index,
+  favorite,
+  isMobile,
+}: {
+  g: GameMeta
+  index: number
+  favorite: boolean
+  isMobile: boolean
+}) {
   const [hover, handlers] = useHoverState()
 
   /* `w-full` on the root is load-bearing: Stagger's per-child motion.div is
@@ -390,7 +405,7 @@ function GameCard({ g, index, favorite }: { g: GameMeta; index: number; favorite
       data-nav={g.id}
       onClick={() => navigate(g.id)}
       {...handlers}
-      className="game-card group relative w-full h-[262px] overflow-hidden text-left rounded-[18px] border flex flex-col"
+      className={`game-card group relative w-full ${isMobile ? 'h-[188px]' : 'h-[262px]'} overflow-hidden text-left rounded-[18px] border flex flex-col`}
       style={{
         borderColor: hover
           ? `${g.accent}99`
@@ -440,7 +455,7 @@ function GameCard({ g, index, favorite }: { g: GameMeta; index: number; favorite
             transition: `opacity 300ms ${EASE}, transform 480ms ${EASE}`,
           }}
         >
-          <Icon name={g.icon} size={128} strokeWidth={0.9} />
+          <Icon name={g.icon} size={isMobile ? 76 : 128} strokeWidth={0.9} />
         </span>
 
         <span
@@ -451,7 +466,11 @@ function GameCard({ g, index, favorite }: { g: GameMeta; index: number; favorite
           }}
         >
           <span
-            className="flex items-center justify-center rounded-[19px] w-[62px] h-[62px]"
+            className={
+              isMobile
+                ? 'flex items-center justify-center rounded-[14px] w-[44px] h-[44px]'
+                : 'flex items-center justify-center rounded-[19px] w-[62px] h-[62px]'
+            }
             style={{
               color: g.accent,
               background: `linear-gradient(155deg, ${g.accent}45, rgba(7, 10, 17, 0.72) 76%)`,
@@ -460,7 +479,7 @@ function GameCard({ g, index, favorite }: { g: GameMeta; index: number; favorite
           >
             <Icon
               name={g.icon}
-              size={28}
+              size={isMobile ? 20 : 28}
               strokeWidth={1.6}
               style={{ filter: `drop-shadow(0 0 12px ${g.accent})` }}
             />
@@ -637,6 +656,7 @@ export default function Lobby() {
   // deliberately rendered OUTSIDE every Reveal (rule 8): it updates without
   // a route change, and Reveal is for content that mounts once.
   const balance = useWalletStore((s) => s.balance)
+  const isMobile = useIsMobile()
 
   const [query, setQuery] = useState('')
   const [activeCat, setActiveCat] = useState<string>('all')
@@ -790,12 +810,16 @@ export default function Lobby() {
             />
 
             <Stagger
-              className="grid gap-3.5 grid-cols-[repeat(auto-fit,minmax(196px,1fr))]"
+              className={
+                isMobile
+                  ? 'grid gap-3.5 grid-cols-[repeat(auto-fit,minmax(130px,1fr))]'
+                  : 'grid gap-3.5 grid-cols-[repeat(auto-fit,minmax(196px,1fr))]'
+              }
               stagger={0.04}
               y={14}
             >
               {favorites.map((g) => (
-                <FavoriteTile key={g.id} g={g} index={GAMES.indexOf(g)} />
+                <FavoriteTile key={g.id} g={g} index={GAMES.indexOf(g)} isMobile={isMobile} />
               ))}
             </Stagger>
           </div>
@@ -876,7 +900,11 @@ export default function Lobby() {
                 (rule 8). */}
             <Stagger
               key={`${section.key}:${activeCat}:${q}`}
-              className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(228px,1fr))]"
+              className={
+                isMobile
+                  ? 'grid gap-3 grid-cols-[repeat(auto-fill,minmax(150px,1fr))]'
+                  : 'grid gap-4 grid-cols-[repeat(auto-fill,minmax(228px,1fr))]'
+              }
             >
               {section.games.map((g) => (
                 <GameCard
@@ -884,6 +912,7 @@ export default function Lobby() {
                   g={g}
                   index={GAMES.indexOf(g)}
                   favorite={favoriteIds.has(g.id)}
+                  isMobile={isMobile}
                 />
               ))}
             </Stagger>

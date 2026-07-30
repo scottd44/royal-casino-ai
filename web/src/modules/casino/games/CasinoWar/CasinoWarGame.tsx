@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { GameLayout, Panel, PageHead, Button, Stat, cn } from '@/platform/ui'
 import { Icon } from '@/platform/icons'
 import { Reveal } from '@/platform/motion'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money } from '@/platform/money/format'
 import { toast } from '@/platform/ui/toast'
@@ -259,6 +260,8 @@ export default function CasinoWarGame() {
   const lastResultText =
     lastNet == null ? '—' : lastNet > 0 ? `+${fmt(lastNet)}` : lastNet < 0 ? `-${fmt(-lastNet)}` : 'push'
 
+  const isMobile = useIsMobile()
+
   return (
     <div>
       <PageHead
@@ -270,7 +273,7 @@ export default function CasinoWarGame() {
       <GameLayout>
         <Panel className="min-w-0">
           <Felt>
-            <div className="war-hands flex flex-wrap justify-center items-center gap-8">
+            <div className={cn('war-hands flex flex-wrap justify-center items-center', isMobile ? 'gap-4' : 'gap-8')}>
               {/* #warP/#warD — casinowar.js:60/62's permanent card-container
                   ids, required (not just visited) by detect():
                   `!!$("#warDeal") && !!$("#warP")`. Legacy reuses these same
@@ -288,7 +291,10 @@ export default function CasinoWarGame() {
                 being toggled, so this whole block conditionally renders. */}
             {(warP || warD) && (
               <div
-                className="war-hands flex flex-wrap justify-center items-center gap-8 mt-4 pt-4 border-t"
+                className={cn(
+                  'war-hands flex flex-wrap justify-center items-center mt-4 pt-4 border-t',
+                  isMobile ? 'gap-4' : 'gap-8',
+                )}
                 style={{ borderColor: 'var(--glass-line)' }}
               >
                 <Seat label="Your war card" card={warP} revealKey={warGenRef.current} />

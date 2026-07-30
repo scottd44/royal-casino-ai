@@ -7,6 +7,7 @@ import BetField, { useBetRef, readBet } from '../../components/BetField'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money } from '@/platform/money/format'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
    Chicken Road — ported from js/games/chicken.js. Cross the road one lane
@@ -120,6 +121,7 @@ function riskColor(i: number, steps: number): string {
 const SPRING = { type: 'spring', stiffness: 170, damping: 24, mass: 0.9 } as const
 
 export default function ChickenGame() {
+  const isMobile = useIsMobile()
   const betRef = useBetRef()
   const diffSelectRef = useRef<HTMLSelectElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
@@ -385,7 +387,7 @@ export default function ChickenGame() {
           <div
             id="chkStage"
             ref={stageRef}
-            className="chk-stage relative h-80 rounded-[16px] overflow-hidden border"
+            className={`chk-stage relative rounded-[16px] overflow-hidden border ${isMobile ? 'h-56' : 'h-80'}`}
             style={{
               background: 'linear-gradient(180deg, #3a4048 0%, #2c3138 50%, #3a4048 100%)',
               borderColor: 'var(--glass-line)',
@@ -660,7 +662,7 @@ export default function ChickenGame() {
             </select>
           </div>
 
-          <div className="stat-grid grid grid-cols-2 gap-2">
+          <div className={`stat-grid grid grid-cols-2 ${isMobile ? 'gap-1.5' : 'gap-2'}`}>
             <Stat k="Lane" id="laneNum" v={crossed} />
             <Stat k="Multiplier" id="curMult" v={`${curMult.toFixed(2)}×`} className="multiplier-tag" />
             <Stat k="Next lane" id="nextMult" v={active ? `${nextMult.toFixed(2)}×` : '—'} />

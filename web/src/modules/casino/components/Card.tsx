@@ -3,6 +3,7 @@ import type { JSX } from 'react'
 import { motion } from 'framer-motion'
 import { DUR, MS, armWatchdog, flipFace, motionPolicy } from '@/platform/motion'
 import { cn } from '@/platform/ui'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
    Card — a single playing card, the shared primitive Wave 4's seven card
@@ -87,6 +88,15 @@ const SIZE_BOX: Record<'md' | 'lg', string> = { md: 'w-14 h-20', lg: 'w-24 h-[13
 const SIZE_RANK: Record<'md' | 'lg', string> = { md: 'text-lg', lg: 'text-2xl' }
 const SIZE_SUIT: Record<'md' | 'lg', string> = { md: 'text-2xl', lg: 'text-4xl' }
 
+// Mobile-narrowed variants (~768px-and-under panel) — 'lg' in particular is
+// sized for a full desktop panel; on a ~340px-wide mobile panel a full hand
+// of 96px-wide 'lg' cards overflows/wraps badly, so it's shrunk down close
+// to (but still a hair above) the original 'md' footprint. 'md' is already
+// small enough it only needs a token trim, not a structural change.
+const SIZE_BOX_MOBILE: Record<'md' | 'lg', string> = { md: 'w-12 h-16', lg: 'w-14 h-20' }
+const SIZE_RANK_MOBILE: Record<'md' | 'lg', string> = { md: 'text-sm', lg: 'text-lg' }
+const SIZE_SUIT_MOBILE: Record<'md' | 'lg', string> = { md: 'text-lg', lg: 'text-2xl' }
+
 const RED_SUITS = new Set<CardSuit>(['♥', '♦'])
 
 /** Face-up content: the `.rank-top` node (rank+suit concatenated, no
@@ -105,13 +115,15 @@ function FrontFace({
   suit,
   red,
   faceDown,
-  size,
+  rankSize,
+  suitSize,
 }: {
   rank: string
   suit: CardSuit
   red: boolean
   faceDown: boolean
-  size: 'md' | 'lg'
+  rankSize: string
+  suitSize: string
 }) {
   return (
     <div
@@ -125,7 +137,7 @@ function FrontFace({
         boxShadow: 'var(--lift-1)',
       }}
     >
-      <b className={cn('rank-top num leading-none', SIZE_RANK[size])}>
+      <b className={cn('rank-top num leading-none', rankSize)}>
         {!faceDown && (
           <>
             {rank}
@@ -134,7 +146,7 @@ function FrontFace({
           </>
         )}
       </b>
-      {!faceDown && <span className={cn('leading-none opacity-70', SIZE_SUIT[size])}>{suit}</span>}
+      {!faceDown && <span className={cn('leading-none opacity-70', suitSize)}>{suit}</span>}
     </div>
   )
 }
@@ -164,6 +176,10 @@ function BackFace() {
 
 export function Card({ rank, suit, faceDown = false, className, size = 'md' }: CardProps): JSX.Element {
   const red = RED_SUITS.has(suit)
+  const isMobile = useIsMobile()
+  const boxSize = isMobile ? SIZE_BOX_MOBILE[size] : SIZE_BOX[size]
+  const rankSize = isMobile ? SIZE_RANK_MOBILE[size] : SIZE_RANK[size]
+  const suitSize = isMobile ? SIZE_SUIT_MOBILE[size] : SIZE_SUIT[size]
 
   /* LATCHED AT MOUNT, same reasoning as Reveal.tsx/Stagger.tsx: the
      animated and instant paths render different tree shapes (a rotating
@@ -207,15 +223,19 @@ export function Card({ rank, suit, faceDown = false, className, size = 'md' }: C
     // one flat face, no rotation, no stacked back face sitting unseen in
     // the DOM. Whichever face is logically current renders directly.
     return (
-      <div className={cn(rootClassName, 'relative', SIZE_BOX[size])}>
-        {faceDown ? <BackFace /> : <FrontFace rank={rank} suit={suit} red={red} faceDown={false} size={size} />}
+      <div className={cn(rootClassName, 'relative', boxSize)}>
+        {faceDown ? (
+          <BackFace />
+        ) : (
+          <FrontFace rank={rank} suit={suit} red={red} faceDown={false} rankSize={rankSize} suitSize={suitSize} />
+        )}
       </div>
     )
   }
 
   return (
     <div
-      className={cn(rootClassName, 'relative', SIZE_BOX[size])}
+      className={cn(rootClassName, 'relative', boxSize)}
       style={{ perspective: 800 }}
     >
       <motion.div
@@ -226,7 +246,7 @@ export function Card({ rank, suit, faceDown = false, className, size = 'md' }: C
         initial={false}
         animate={faceDown ? 'back' : 'front'}
       >
-        <FrontFace rank={rank} suit={suit} red={red} faceDown={faceDown} size={size} />
+        <FrontFace rank={rank} suit={suit} red={red} faceDown={faceDown} rankSize={rankSize} suitSize={suitSize} />
         <BackFace />
       </motion.div>
     </div>

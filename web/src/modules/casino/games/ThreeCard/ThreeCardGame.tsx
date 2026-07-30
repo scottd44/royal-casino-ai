@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { GameLayout, Panel, PageHead, Button } from '@/platform/ui'
+import { GameLayout, Panel, PageHead, Button, cn } from '@/platform/ui'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 import { Reveal } from '@/platform/motion'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money } from '@/platform/money/format'
@@ -351,6 +352,8 @@ export default function ThreeCardGame() {
           ? '-' + fmt(-lastNetRef.current)
           : '0'
 
+  const isMobile = useIsMobile()
+
   return (
     <div>
       <PageHead
@@ -362,7 +365,7 @@ export default function ThreeCardGame() {
       <GameLayout>
         <Panel className="min-w-0">
           <Felt>
-            <div className="tcp-seats flex flex-wrap items-center justify-center gap-8">
+            <div className={cn('tcp-seats flex flex-wrap items-center justify-center', isMobile ? 'gap-4' : 'gap-8')}>
               <div className="tcp-seat hand-row text-center">
                 <div className="hand-label flex items-center justify-center gap-2 text-sm text-muted mb-3">
                   <span>Dealer</span>
@@ -370,7 +373,10 @@ export default function ThreeCardGame() {
                     {dealerScoreText}
                   </span>
                 </div>
-                <div className="cards flex flex-wrap justify-center gap-2 min-h-[136px]" id="tcpDealer">
+                <div
+                  className={cn('cards flex flex-wrap justify-center gap-2', isMobile ? 'min-h-[80px]' : 'min-h-[136px]')}
+                  id="tcpDealer"
+                >
                   {/* Same reasoning as BlackjackGame.tsx's dealer hole card:
                       dealer.length is fixed at 3 for the whole hand, so
                       key={i} keeps every slot mounted across the
@@ -393,7 +399,10 @@ export default function ThreeCardGame() {
                     {playerScoreText}
                   </span>
                 </div>
-                <div className="cards flex flex-wrap justify-center gap-2 min-h-[136px]" id="tcpPlayer">
+                <div
+                  className={cn('cards flex flex-wrap justify-center gap-2', isMobile ? 'min-h-[80px]' : 'min-h-[136px]')}
+                  id="tcpPlayer"
+                >
                   {player.map((c, i) => (
                     <Reveal key={i} as="div" preset="scaleIn" duration={0.22}>
                       <Card rank={c.rank} suit={c.suit.s} size="lg" />
