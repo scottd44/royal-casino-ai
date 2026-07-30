@@ -12,7 +12,7 @@ const DiceGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🎲 Dice</h2>
+        <h2 class="page-title">${Casino.icon("dices", "ico-title")} Dice</h2>
         <p class="page-sub">Pick a target and predict whether the roll lands under or over it. Higher risk, higher payout.</p>
         ${Casino.helpBtnHTML("diceHelp")}
       </div>

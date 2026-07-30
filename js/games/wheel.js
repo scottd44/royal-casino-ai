@@ -50,7 +50,7 @@ const WheelGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🎯 Wheel</h2>
+        <h2 class="page-title">${Casino.icon("target", "ico-title")} Wheel</h2>
         <p class="page-sub">Pick a risk level and spin. Every winning spin multiplies your running multiplier — keep spinning to grow it, but a bust segment wipes it out. Cash out any time to bank it.</p>
         ${Casino.helpBtnHTML("wheelHelp")}
       </div>
@@ -128,7 +128,7 @@ const WheelGame = (() => {
         const label = active ? total.toFixed(total < 100 ? 2 : 0) + "×" : m + "×";
         return `<span class="wheel-target" style="--c:${COLORS[col]}">${label}</span>`;
       });
-      chips.push(`<span class="wheel-target wheel-target-bust">💀 ${Math.round(r.bust / S * 100)}%</span>`);
+      chips.push(`<span class="wheel-target wheel-target-bust">Bust ${Math.round(r.bust / S * 100)}%</span>`);
       targetsEl.innerHTML = chips.join("");
     }
 
@@ -163,7 +163,7 @@ const WheelGame = (() => {
 
     function updateHistory() {
       view.querySelector("#history").innerHTML = history.slice(-14).reverse()
-        .map((h) => `<span class="pill ${h > 0 ? "win" : "lose"}">${h > 0 ? h.toFixed(2) + "×" : "💀"}</span>`).join("");
+        .map((h) => `<span class="pill ${h > 0 ? "win" : "lose"}">${h > 0 ? h.toFixed(2) + "×" : "bust"}</span>`).join("");
     }
 
     function spin() {
@@ -190,11 +190,38 @@ const WheelGame = (() => {
       const centerAngle = idx * seg + seg / 2;
       const delta = ((-centerAngle - wheelRot) % 360 + 360) % 360;
       wheelRot += delta + 360 * 5;
-      disc.style.transition = "transform 4s cubic-bezier(0.15, 0.85, 0.2, 1)";
-      disc.style.transform = `rotate(${wheelRot}deg)`;
 
-      const tickInt = setInterval(() => Casino.sound.play("tick"), 170);
-      setTimeout(() => { clearInterval(tickInt); settle(idx); }, 4100);
+      /* GSAP with power4.out: the wheel carries real momentum and bleeds it off
+         asymptotically, the way a weighted rim actually stops. A CSS bezier
+         approximated this but eased out too evenly, so it read as "playing an
+         animation" rather than spinning down. force3D keeps it on the GPU. */
+      const g = window.gsap;
+      const SPIN_MS = 4200;
+      if (g && !(Casino.fx && Casino.fx.reduced())) {
+        disc.style.transition = "none";
+        g.to(disc, {
+          rotation: wheelRot,
+          duration: SPIN_MS / 1000,
+          ease: "power4.out",
+          force3D: true,
+        });
+      } else {
+        disc.style.transition = "transform 4s cubic-bezier(0.15, 0.85, 0.2, 1)";
+        disc.style.transform = `rotate(${wheelRot}deg)`;
+      }
+
+      // ticks thin out as it slows, so the audio decelerates with the rim
+      let tickGap = 90;
+      let tickInt = null;
+      const scheduleTick = () => {
+        tickInt = setTimeout(() => {
+          Casino.sound.play("tick");
+          tickGap = Math.min(340, tickGap * 1.14);
+          scheduleTick();
+        }, tickGap);
+      };
+      scheduleTick();
+      setTimeout(() => { clearTimeout(tickInt); settle(idx); }, SPIN_MS + 100);
     }
 
     function settle(idx) {
@@ -207,7 +234,7 @@ const WheelGame = (() => {
         history.push(0);
         hub.textContent = "BUST";
         hub.className = "wheel-hub lose";
-        view.querySelector("#lastSpin").textContent = "💀 bust";
+        view.querySelector("#lastSpin").textContent = "bust";
         Casino.sound.play("lose");
         Casino.toast(`Busted — lost ${Casino.money(bet)}.`, "lose");
         active = false;

@@ -41,7 +41,7 @@ const HiloGame = (() => {
   function render(view) {
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🔼 Hilo</h2>
+        <h2 class="page-title">${Casino.icon("arrow-up-down", "ico-title")} Hilo</h2>
         <p class="page-sub">Will the next card be higher or lower? Ace is low. A tie wins either way. Chain correct calls for a bigger multiplier and cash out any time.</p>
         ${Casino.helpBtnHTML("hiloHelp")}
       </div>
@@ -63,8 +63,8 @@ const HiloGame = (() => {
 
           <div class="field">
             <label>Your call</label>
-            <button class="btn btn-block btn-green" id="higherBtn" style="padding:12px;margin-bottom:8px;" disabled>▲ Higher or same</button>
-            <button class="btn btn-block btn-blue" id="lowerBtn" style="padding:12px;" disabled>▼ Lower or same</button>
+            <button class="btn btn-block btn-green" id="higherBtn" style="padding:12px;margin-bottom:8px;" disabled>${Casino.icon("chevron-up")} Higher or same</button>
+            <button class="btn btn-block btn-blue" id="lowerBtn" style="padding:12px;" disabled>${Casino.icon("chevron-down")} Lower or same</button>
           </div>
 
           <div class="stat-grid">
@@ -105,14 +105,14 @@ const HiloGame = (() => {
     function updateGuessButtons() {
       if (!active || !current) {
         higherBtn.disabled = lowerBtn.disabled = true;
-        higherBtn.textContent = "▲ Higher or same";
-        lowerBtn.textContent = "▼ Lower or same";
+        higherBtn.innerHTML = Casino.icon("chevron-up") + " Higher or same";
+        lowerBtn.innerHTML = Casino.icon("chevron-down") + " Lower or same";
         return;
       }
       const ch = chanceHigher(current.rank), cl = chanceLower(current.rank);
       higherBtn.disabled = lowerBtn.disabled = false;
-      higherBtn.innerHTML = `▲ Higher or same · ${(ch * 100).toFixed(1)}% · ${multFor(ch).toFixed(2)}×`;
-      lowerBtn.innerHTML = `▼ Lower or same · ${(cl * 100).toFixed(1)}% · ${multFor(cl).toFixed(2)}×`;
+      higherBtn.innerHTML = `${Casino.icon("chevron-up")} Higher or same · ${(ch * 100).toFixed(1)}% · ${multFor(ch).toFixed(2)}×`;
+      lowerBtn.innerHTML = `${Casino.icon("chevron-down")} Lower or same · ${(cl * 100).toFixed(1)}% · ${multFor(cl).toFixed(2)}×`;
     }
 
     function updateStats() {

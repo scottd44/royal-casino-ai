@@ -33,7 +33,7 @@ const SnakesGame = (() => {
   const HOWTO = `
     <h4>Goal</h4>
     <p>Roll two dice and move your token clockwise around the 12-tile loop. Land on a <b>safe tile</b> and your
-    multiplier grows; land on a <b>snake</b> 🐍 and the round busts. Cash out any time after your first roll.</p>
+    multiplier grows; land on a <b>snake</b> and the round busts. Cash out any time after your first roll.</p>
     <h4>Difficulty = snakes</h4>
     <p>Pick how many of the 12 tiles are snakes — <b>Easy</b> (1) grows slowly and safely, <b>Master</b> (9) can pay
     over 1,700× but rarely survives:</p>
@@ -52,7 +52,7 @@ const SnakesGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🐍 Snakes</h2>
+        <h2 class="page-title">${Casino.icon("rc:snake", "ico-title")} Snakes</h2>
         <p class="page-sub">Roll 2d6 and race clockwise around the loop. Safe tiles compound your multiplier; snakes bust you. Cash out or push your luck up to 5 rolls.</p>
         ${Casino.helpBtnHTML("snHelp")}
       </div>
@@ -75,7 +75,7 @@ const SnakesGame = (() => {
             <div class="stat"><div class="k">Next roll</div><div class="v"><span class="multiplier-tag" id="snNext">—</span></div></div>
             <div class="stat"><div class="k">Cash out</div><div class="v" id="snCash">—</div></div>
           </div>
-          <button class="btn btn-block btn-green" id="snRollBtn" style="margin-top:16px;font-size:16px;padding:14px;">🎲 Roll Dice</button>
+          <button class="btn btn-block btn-green" id="snRollBtn" style="margin-top:16px;font-size:16px;padding:14px;">${Casino.icon("dices")} Roll Dice</button>
           <button class="btn btn-block btn-gold" id="snCashBtn" style="margin-top:10px;font-size:16px;padding:14px;display:none;">Cash Out</button>
           <label class="vp-toggle" style="margin-top:12px;"><input type="checkbox" id="snInstant"> Instant roll <span>— skip the token animation</span></label>
         </div>
@@ -151,7 +151,7 @@ const SnakesGame = (() => {
         pos = land; rolls++;
         const t = tile(land);
         if (board[land]) { // snake → bust
-          t.classList.add("snake", "revealed"); t.querySelector(".sn-tile-face").textContent = "🐍";
+          t.classList.add("snake", "revealed"); t.querySelector(".sn-tile-face").innerHTML = `<span class="sn-snake"></span>`;
           setToken(land);
           revealAll();
           phase = "over";
@@ -159,7 +159,7 @@ const SnakesGame = (() => {
           Casino.sound.play("lose");
           rollBtn.disabled = false; cashBtn.style.display = "none"; betInput.disabled = false;
           view.querySelectorAll("#snDiff .btn").forEach((b) => (b.disabled = false));
-          rollBtn.textContent = "🎲 Roll Dice";
+          rollBtn.innerHTML = Casino.icon("dices") + " Roll Dice";
           busy = false; updateStats();
         } else { // safe → multiply
           mult = multAfter(snakes, rolls);
@@ -172,7 +172,7 @@ const SnakesGame = (() => {
             updateStats(); busy = false; cashOut(true);
           } else {
             msg.textContent = `Safe! ${mult.toFixed(2)}× — roll again or cash out.`; msg.style.color = "var(--green)";
-            rollBtn.disabled = false; cashBtn.disabled = false; rollBtn.textContent = "🎲 Roll Again";
+            rollBtn.disabled = false; cashBtn.disabled = false; rollBtn.innerHTML = Casino.icon("dices") + " Roll Again";
             busy = false; updateStats();
           }
         }
@@ -195,7 +195,7 @@ const SnakesGame = (() => {
     function revealAll() {
       for (let i = 0; i < TILES; i++) {
         const t = tile(i); if (t.classList.contains("revealed")) continue;
-        if (board[i]) { t.classList.add("snake", "faint"); t.querySelector(".sn-tile-face").textContent = "🐍"; }
+        if (board[i]) { t.classList.add("snake", "faint"); t.querySelector(".sn-tile-face").innerHTML = `<span class="sn-snake"></span>`; }
       }
     }
 
@@ -207,7 +207,7 @@ const SnakesGame = (() => {
       revealAll();
       rollBtn.disabled = false; cashBtn.style.display = "none"; betInput.disabled = false;
       view.querySelectorAll("#snDiff .btn").forEach((b) => (b.disabled = false));
-      rollBtn.textContent = "🎲 Roll Dice";
+      rollBtn.innerHTML = Casino.icon("dices") + " Roll Dice";
       const net = ret - bet;
       msg.textContent = `Cashed out ${mult.toFixed(2)}× = ${Casino.money(ret)} (${net >= 0 ? "+" : ""}${Casino.fmt(net)}).`;
       msg.style.color = net >= 0 ? "var(--green)" : "var(--red)";

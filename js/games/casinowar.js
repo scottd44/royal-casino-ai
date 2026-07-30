@@ -49,7 +49,7 @@ const CasinoWarGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">⚔️ Casino War</h2>
+        <h2 class="page-title">${Casino.icon("swords", "ico-title")} Casino War</h2>
         <p class="page-sub">Highest card wins — that's it. Tie? Go to war for the pot.</p>
         ${Casino.helpBtnHTML("warHelp")}
       </div>
@@ -69,7 +69,7 @@ const CasinoWarGame = (() => {
           <button class="btn btn-block btn-green" id="warDeal" style="margin-top:14px;font-size:16px;padding:14px;">Deal</button>
           <div class="hc-actrow" id="warWarRow" style="margin-top:10px;display:none;">
             <button class="btn btn-ghost" id="warSurrender">Surrender (½)</button>
-            <button class="btn btn-red" id="warGo">⚔️ Go to War</button>
+            <button class="btn btn-red" id="warGo">${Casino.icon("swords")} Go to War</button>
           </div>
           <div class="stat-grid" style="margin-top:14px;">
             <div class="stat"><div class="k">Last result</div><div class="v" id="warLast">—</div></div>

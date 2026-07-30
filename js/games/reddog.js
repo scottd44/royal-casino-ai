@@ -53,7 +53,7 @@ const RedDogGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🔴 Red Dog</h2>
+        <h2 class="page-title">${Casino.icon("circle-dot", "ico-title")} Red Dog</h2>
         <p class="page-sub">Bet the third card lands between the first two. Wider spread = better odds of hitting, smaller payout. Raise on a big spread.</p>
         ${Casino.helpBtnHTML("rdHelp")}
       </div>

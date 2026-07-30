@@ -90,7 +90,7 @@ const ThreeCardGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🂡 Three Card Poker</h2>
+        <h2 class="page-title">${Casino.icon("layers-2", "ico-title")} Three Card Poker</h2>
         <p class="page-sub">Beat the dealer with three cards. Ante up, then Play or Fold. Add Pair Plus for bonus payouts on your own hand.</p>
         ${Casino.helpBtnHTML("tcpHelp")}
       </div>

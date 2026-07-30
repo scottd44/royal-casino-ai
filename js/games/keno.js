@@ -59,7 +59,7 @@ const KenoGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🔢 Keno</h2>
+        <h2 class="page-title">${Casino.icon("hash", "ico-title")} Keno</h2>
         <p class="page-sub">Pick up to ${MAX_PICK} numbers, choose your risk, and watch 10 tiles get drawn. Match your numbers for payouts up to ${CAP.toLocaleString()}×.</p>
         ${Casino.helpBtnHTML("knHelp")}
       </div>
@@ -71,7 +71,7 @@ const KenoGame = (() => {
         <div class="panel">
           ${Casino.betFieldHTML(20)}
           <div class="bet-row" style="margin-top:10px;">
-            <button class="btn btn-ghost" id="knRandom">🎲 Quick Pick</button>
+            <button class="btn btn-ghost" id="knRandom">${Casino.icon("shuffle")} Quick Pick</button>
             <button class="btn btn-ghost" id="knClear">Clear</button>
           </div>
           <div class="field" style="margin-top:12px;">

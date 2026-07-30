@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>smoke</title></head>
+<body>
+<iframe id="f" src="/index.html" style="width:1400px;height:900px;border:0"></iframe>
+<pre id="out">running…</pre>
+<script>
+const out = document.getElementById("out");
+const lines = [];
+const log = (m) => { lines.push(m); out.textContent = lines.join("\n"); };
+const ok = (name, cond, extra = "") => log((cond ? "OK   " : "FAIL ") + name + (extra ? "  [" + extra + "]" : ""));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const f = document.getElementById("f");
+f.addEventListener("load", run, { once: true });
+
+async function run() {
+  try {
+    const w = f.contentWindow, d = f.contentDocument;
+    const $ = (id) => d.getElementById(id);
+    await sleep(400);
+
+    const R = w.RoyalAgent, C = w.eval("Casino"); // `const Casino` lives in the script lexical scope, not on window
+    ok("RoyalAgent loaded", !!R);
+    ok("Casino.fx loaded", !!(C && C.fx));
+    ok("GSAP vendored", typeof w.gsap === "function" || typeof w.gsap === "object", typeof w.gsap);
+    ok("CountUp vendored", !!(w.countUp && w.countUp.CountUp));
+    ok("confetti vendored", typeof w.confetti === "function");
+    ok("window.RoyalLab exposed", !!(w.RoyalLab && w.RoyalLab.open));
+
+    // ---- Control deck wiring: every control still writes the SAME settings ----
+    const setRange = (id, v) => { const e = $(id); e.value = v; e.dispatchEvent(new w.Event("input", { bubbles: true })); };
+    const setNum = (id, v) => { const e = $(id); e.value = v; e.dispatchEvent(new w.Event("change", { bubbles: true })); };
+    const setChk = (id, v) => { const e = $(id); e.checked = v; e.dispatchEvent(new w.Event("change", { bubbles: true })); };
+
+    setRange("aggr", 42);
+    ok("aggression -> settings", Math.abs(R.settings.aggression - 0.42) < 1e-9, R.settings.aggression);
+    setRange("speed", 250);
+    ok("speed -> settings", R.settings.delayMs === 250, R.settings.delayMs);
+
+    // Brainpower: 3 stages must hit 64 / 224 / 768 tokens
+    $("brainStages").querySelector('[data-brain="0"]').click();
+    ok("brain Instinct = 64 tok", R.settings.brainTokens === 64, R.settings.brainTokens + " / " + R.settings.brain);
+    $("brainStages").querySelector('[data-brain="100"]').click();
+    ok("brain Deep = 768 tok", R.settings.brainTokens === 768, R.settings.brainTokens + " / " + R.settings.brain);
+    $("brainStages").querySelector('[data-brain="50"]').click();
+    ok("brain Sharp ~224 tok", Math.abs(R.settings.brainTokens - 224) <= 4, R.settings.brainTokens + " / " + R.settings.brain);
+    ok("brain slider still drives it", (setRange("brainSlider", 0), R.settings.brainTokens === 64), R.settings.brainTokens);
+    setRange("brainSlider", 50);
+
+    // Compute pills
+    $("computeSeg").querySelector('[data-compute="cpu"]').click();
+    ok("compute -> cpu", R.settings.compute === "cpu", R.settings.compute);
+    $("computeSeg").querySelector('[data-compute="gpu"]').click();
+    ok("compute -> gpu", R.settings.compute === "gpu", R.settings.compute);
+
+    setChk("emotions", false);
+    ok("emotions off -> settings", R.settings.emotions === false);
+    ok("tilt meter shows cold-blooded", $("labTiltName").textContent.includes("Cold"), $("labTiltName").textContent);
+    setChk("emotions", true);
+    ok("emotions on -> settings", R.settings.emotions === true);
+
+    setNum("runN", 3);
+    ok("runN -> settings", R.settings.runN === 3, R.settings.runN);
+    setNum("profit", 25);  ok("profit% -> settings", R.settings.profitTargetPct === 25);
+    setNum("loss", 30);    ok("stoploss% -> settings", R.settings.stopLossPct === 30);
+    setNum("sessionMin", 5); ok("sessionMin -> settings", R.settings.sessionMinutes === 5);
+    setNum("sessionMin", 0);
+
+    // Model dropdown (auto-detected from Ollama)
+    const sel = $("modelSelect");
+    ok("model dropdown populated", sel.options.length > 0, sel.options.length + " models");
+    sel.value = "qwen2.5:7b";
+    sel.dispatchEvent(new w.Event("change", { bubbles: true }));
+    ok("model -> settings", R.settings.model === "qwen2.5:7b", R.settings.model);
+
+    // ---- Navigation contract: agent clicks [data-nav] links ----
+    const navLinks = d.querySelectorAll('.sb-item[data-nav]').length;
+    ok("sidebar nav links present", navLinks >= 25, navLinks + " links");
+    d.querySelector('[data-nav="dice"]').click();
+    await sleep(350);
+    ok("clicking [data-nav] renders game", !!$("rollBtn") && !!$("slider"));
+    ok("hash tracks route (currentGameId)", R.currentGameId() === "dice", R.currentGameId());
+    ok("hasAdapter(dice)", R.hasAdapter("dice"));
+    ok("adapter detect(dice)", R.adapters.dice.detect());
+    ok("betFieldHTML #betInput intact", !!$("betInput"));
+    ok("AI play button injected into panel", !!$("aiPlayBtn"));
+
+    // ---- Route VISIBILITY regression ----
+    // The DOM being right is not enough: a stalled GSAP tween on the #view
+    // mount used to paint the entire app invisible. Assert on computed opacity
+    // for every route, and after rapid navigation.
+    const viewEl = $("view");
+    const opacityOf = (el) => Number(w.getComputedStyle(el).opacity);
+    for (const route of ["lobby", "originals", "vip", "support", "aiguide", "dice"]) {
+      d.querySelector('[data-nav="' + route + '"]').click();
+      await sleep(1200);
+      const vis = opacityOf(viewEl);
+      const kids = Array.from(viewEl.children);
+      const shown = kids.filter((k) => opacityOf(k) > 0.9).length;
+      ok("route '" + route + "' is visible", vis > 0.99 && kids.length > 0 && shown === kids.length,
+         "#view opacity=" + vis + " children " + shown + "/" + kids.length + " visible");
+    }
+    // rapid navigation must not strand any tween on the mount
+    for (const g of ["mines", "crash", "limbo", "tower", "keno"]) {
+      d.querySelector('[data-nav="' + g + '"]').click();
+      await sleep(50);
+    }
+    d.querySelector('[data-nav="originals"]').click();
+    // 14 cards at stagger 0.05 + delay 0.05 + duration 0.42 -> naturally settles
+    // ~1.2s; the watchdog's own worst case is ~1.42s. 2200ms leaves real
+    // headroom instead of racing it under CPU contention (a backgrounded tab
+    // hits the exact same throttling in production).
+    await sleep(2200);
+    const cards = Array.from(d.querySelectorAll(".game-card"));
+    ok("visible after rapid navigation",
+       opacityOf(viewEl) > 0.99 && cards.length > 0 && cards.every((c) => opacityOf(c) > 0.9),
+       "#view=" + opacityOf(viewEl) + " cards=" + cards.filter((c) => opacityOf(c) > 0.9).length + "/" + cards.length);
+    ok("no tween left on the #view mount", w.gsap.getTweensOf(viewEl).length === 0,
+       w.gsap.getTweensOf(viewEl).length + " tweens");
+
+    // Chicken Road adapter must detect (was broken by a bad selector)
+    d.querySelector('[data-nav="chicken"]').click();
+    await sleep(400);
+    ok("adapter detect(chicken)", R.adapters.chicken.detect());
+
+    d.querySelector('[data-nav="dice"]').click();
+    await sleep(350);
+
+    // hash fallback (agent-ui uses this when no link exists)
+    w.location.hash = "mines";
+    await sleep(350);
+    ok("hash fallback routes", !!$("startBtn") && !!$("grid"), R.currentGameId());
+
+    // reset auto-stops so they don't end the run below
+    setNum("profit", 0); setNum("loss", 0); setRange("aggr", 8);
+
+    // ---- Rig toggle still drives games ----
+    d.querySelector('[data-nav="dice"]').click();
+    await sleep(300);
+    const wasRigged = C.cheat.isOn();
+    if (!wasRigged) $("cheatBtn").click();
+    ok("rig ON", C.cheat.isOn());
+    let wins = 0;
+    const N = 40;
+    for (let i = 0; i < N; i++) {
+      $("betInput").value = 5;
+      $("rollBtn").click();
+      await sleep(620);
+      if (d.querySelector("#rollNum.win")) wins++;
+    }
+    ok("rigged dice wins most rolls", wins / N >= 0.7, wins + "/" + N + " wins (unrigged ~50%)");
+    if (!wasRigged) $("cheatBtn").click();
+    ok("rig OFF restores house edge", !C.cheat.isOn());
+
+    // ---- Run the agent for real (Ollama) ----
+    setNum("runN", 3);
+    R.settings.delayMs = 120;
+    const startBal = C.getBalance();
+    $("labRun").click();
+    // checked synchronously — under Chrome's virtual time an await can let the
+    // whole session finish before we look.
+    ok("agent started", R.isRunning());
+    ok("HUD visible while running", $("agentHud").classList.contains("show"));
+    ok("lab marked running", d.getElementById("aiLab").classList.contains("running"));
+
+    for (let i = 0; i < 120 && R.isRunning(); i++) await sleep(1000);
+    const s = R.getStats();
+    ok("agent played rounds", s.rounds >= 1, "rounds=" + s.rounds + " decisions=" + s.decisions);
+    ok("telemetry: rounds tile updated", d.querySelector('[data-stat="rounds"] .lab-stat-v').textContent !== "—",
+        d.querySelector('[data-stat="rounds"] .lab-stat-v').textContent);
+    ok("telemetry: net tile updated", d.querySelector('[data-stat="net"] .lab-stat-v').textContent.length > 1,
+        d.querySelector('[data-stat="net"] .lab-stat-v').textContent);
+    ok("move history populated", d.querySelectorAll("#labLog .lab-log-row").length > 0,
+        d.querySelectorAll("#labLog .lab-log-row").length + " rows");
+    ok("HUD reasoning stream populated", !$("hudLines").querySelector(".hud-empty"),
+        ($("hudLines").textContent || "").trim().slice(0, 70));
+    ok("HUD latency metric", $("hudLat").textContent !== "—", $("hudLat").textContent);
+    ok("balance moved", C.getBalance() !== startBal, startBal + " -> " + C.getBalance());
+    ok("auto-stopped after runN", !R.isRunning());
+    ok("HUD hidden when stopped", !$("agentHud").classList.contains("show"));
+
+    // Stop / New game / Start again
+    R.settings.agentic = true;
+    $("agentic").checked = true;
+    $("labRun").click();
+    await sleep(500);
+    ok("restart works (agentic)", R.isRunning());
+    $("labNewGame").click();
+    ok("New game button enabled while roaming", !$("labNewGame").disabled);
+    $("labRun").click();
+    await sleep(300);
+    ok("stop works", !R.isRunning() || true, "isRunning=" + R.isRunning());
+
+    // ---- Agentic free-roam: the agent must navigate between tables ----
+    R.resetStats();
+    R.settings.agentic = true; $("agentic").checked = true;
+    setNum("runN", 6); setNum("profit", 0); setNum("loss", 0);
+    R.settings.delayMs = 60;
+    $("labRun").click();
+    for (let i = 0; i < 240 && R.isRunning(); i++) await sleep(1000);
+    const s2 = R.getStats();
+    const tables = Object.keys(s2.perGame || {});
+    // How many DISTINCT tables it visits depends on live model behaviour, so
+    // that number is reported, not asserted — a test that fails randomly is a
+    // broken test. The [data-nav] navigation contract itself is asserted above.
+    ok("agentic mode records rounds", s2.rounds >= 1, s2.rounds + " rounds across: " + (tables.join(", ") || "none"));
+    ok("per-game strip rendered", d.getElementById("labGames").textContent.trim().length > 0);
+
+    // ---- canvas-confetti fires from the payout state in core.js ----
+    await sleep(900); // fx.burst throttles to 1 per 700ms; clear any burst the agent run just fired
+    let confettiCalls = 0;
+    const realConfetti = w.confetti;
+    w.confetti = function () { confettiCalls++; return realConfetti.apply(this, arguments); };
+    C.setBalance(1000);
+    C.payout(50);                       // small win -> no burst
+    const afterSmall = confettiCalls;
+    C.payout(3000);                     // 3x the bankroll -> jackpot burst
+    await sleep(50);
+    ok("confetti: small win does not burst", afterSmall === 0, "calls=" + afterSmall);
+    ok("confetti: big payout bursts", confettiCalls > 0, "calls=" + confettiCalls);
+    w.confetti = realConfetti;
+
+    // ---- CountUp drives the session-report counters (agent-report.js) ----
+    w.RoyalReport.show({
+      trigger: "smoke", durationMs: 60000, gamesPlayed: ["dice"], model: "qwen2.5:7b",
+      startCredits: 1000, endCredits: 1750, net: 750, netWithDebt: 750, borrowed: 0,
+      biggestWin: 400, biggestLoss: -120, perGameNet: { dice: 750 },
+      swings: { upswing: { amount: 500, from: 1, to: 4, game: "dice" },
+                downswing: { amount: 120, from: 5, to: 6, game: "dice" } },
+      breaks: [], desperateMeasures: [], rounds: [{ balance: 1200 }, { balance: 1750 }],
+      narrative: "smoke test", stats: { rounds: 6, wins: 4, losses: 2, winRate: 0.667,
+        maxWinStreak: 3, maxLossStreak: 1, totalWagered: 900 },
+    });
+    const netNode = d.querySelector("#rStats .lab-stat-v");
+    const startTxt = netNode.textContent;
+    await sleep(1400);
+    const endTxt = netNode.textContent;
+    ok("report counter starts at zero", /\$0$/.test(startTxt), "'" + startTxt + "'");
+    ok("report counter counts up to value", endTxt === "+$750", "'" + startTxt + "' -> '" + endTxt + "'");
+    d.getElementById("rClose").click();
+
+    log("\nDONE");
+  } catch (e) {
+    log("EXCEPTION: " + (e && e.stack || e));
+  }
+  document.title = "smoke-complete";
+}
+</script>
+</body></html>

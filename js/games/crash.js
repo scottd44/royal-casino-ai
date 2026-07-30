@@ -37,7 +37,7 @@ const CrashGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🚀 Crash</h2>
+        <h2 class="page-title">${Casino.icon("rocket", "ico-title")} Crash</h2>
         <p class="page-sub">The multiplier climbs from 1.00×. Cash out before it crashes — wait too long and you lose it all.</p>
         ${Casino.helpBtnHTML("crashHelp")}
       </div>
@@ -211,7 +211,7 @@ const CrashGame = (() => {
       view.querySelector("#lastRound").textContent = crashPoint.toFixed(2) + "×";
 
       if (!cashedOut) {
-        resultEl.textContent = `💥 Crashed @ ${crashPoint.toFixed(2)}× — lost ${Casino.money(Number(betInput.value))}`;
+        resultEl.textContent = `Crashed @ ${crashPoint.toFixed(2)}× — lost ${Casino.money(Number(betInput.value))}`;
         resultEl.style.color = "var(--red)";
         Casino.sound.play("lose");
         Casino.toast(`Crashed at ${crashPoint.toFixed(2)}× — bet lost.`, "lose");

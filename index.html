@@ -3,86 +3,138 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
   <title>Royal Casino — Play for Fun</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet" />
+  <!-- Cinzel is the wordmark/display face only — kept separate so the line above
+       stays exactly the Inter + JetBrains Mono pairing. -->
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@500;700;900&display=swap" rel="stylesheet" />
   <!-- bump ?v= on each release so browsers never serve stale assets -->
-  <link rel="stylesheet" href="css/styles.css?v=35" />
+  <link rel="stylesheet" href="css/styles.css?v=66" />
 </head>
 <body>
-  <!-- Top bar -->
-  <header class="topbar">
-    <div class="brand" data-nav="lobby">
-      <span class="brand-mark">♠</span>
-      <span class="brand-name">ROYAL<span class="brand-accent">CASINO</span></span>
+  <!-- ============================================================
+       Shell: fixed left sidebar + top header + #view mount.
+       The sidebar holds a [data-nav] link for EVERY game — the AI
+       agent navigates by clicking those (see agent-ui switchToGame).
+       ============================================================ -->
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sb-head">
+        <div class="brand" data-nav="lobby">
+          <span class="brand-mark"><i data-lucide="spade" class="ico"></i></span>
+          <span class="brand-name">ROYAL<span class="brand-accent">CASINO</span></span>
+        </div>
+        <button class="sb-collapse" id="sbCollapse" title="Collapse sidebar" aria-label="Collapse sidebar"><i data-lucide="chevrons-left" class="ico"></i></button>
+      </div>
+      <nav class="sb-nav" id="sbNav"><!-- rendered by app.js --></nav>
+    </aside>
+
+    <div class="app-main">
+      <header class="topbar">
+        <button class="icon-btn sb-toggle" id="sbToggle" title="Menu" aria-label="Open menu"><i data-lucide="menu" class="ico"></i></button>
+
+        <div class="topbar-context" id="topbarContext">
+          <span class="tb-crumb" id="tbCrumb">Lobby</span>
+        </div>
+
+        <div class="wallet">
+          <div class="wallet-chip" id="walletChip">
+            <span class="wallet-icon"><i data-lucide="wallet" class="ico"></i></span>
+            <span class="wallet-cur">$</span>
+            <span class="wallet-amount" id="walletAmount">0</span>
+          </div>
+          <button class="btn btn-sm btn-gold" id="addFundsBtn" title="Add simulated cash">+ Cash</button>
+
+          <div class="top-actions">
+            <button class="icon-btn" id="cheatBtn" title="Rig the odds in your favor"><i data-lucide="wand-2" class="ico"></i></button>
+            <button class="icon-btn" id="muteBtn" title="Toggle sound"><i data-lucide="volume-2" class="ico"></i></button>
+            <button class="icon-btn" id="resetBtn" title="Reset your balance"><i data-lucide="rotate-ccw" class="ico"></i></button>
+          </div>
+
+          <div class="profile">
+            <button class="avatar-btn" id="profileBtn" aria-haspopup="true" aria-expanded="false" title="Profile & settings">
+              <span class="avatar"><i data-lucide="spade" class="ico"></i></span>
+              <span class="avatar-caret"><i data-lucide="chevron-down" class="ico"></i></span>
+            </button>
+            <div class="profile-menu" id="profileMenu">
+              <div class="pm-head">
+                <span class="avatar avatar-lg"><i data-lucide="spade" class="ico"></i></span>
+                <div class="pm-id">
+                  <b>Guest Player</b>
+                  <span class="pm-tier">Bronze tier · play-money</span>
+                </div>
+              </div>
+              <div class="pm-bal">
+                <span>Balance</span><b>$<span id="pmBalance">0</span></b>
+              </div>
+              <div class="pm-sep"></div>
+              <button class="pm-item" data-nav="vip"><i data-lucide="crown" class="ico"></i> VIP Club</button>
+              <button class="pm-item" data-nav="support"><i data-lucide="message-circle" class="ico"></i> Live Support</button>
+              <button class="pm-item" data-nav="aiguide"><i data-lucide="book-open" class="ico"></i> AI Guide</button>
+              <div class="pm-sep"></div>
+              <button class="pm-item" id="pmMute"><i data-lucide="volume-2" class="ico"></i> Sound</button>
+              <button class="pm-item" id="pmCheat"><i data-lucide="wand-2" class="ico"></i> Rigged odds</button>
+              <button class="pm-item pm-danger" id="pmReset"><i data-lucide="rotate-ccw" class="ico"></i> Reset balance</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main id="view" class="view"><!-- rendered by JS --></main>
+
+      <footer class="footer">
+        <span>Royal Casino · play-money demo · simulated dollars only, no real currency</span>
+      </footer>
     </div>
+  </div>
 
-    <nav class="topnav" id="topnav">
-      <button class="nav-link" data-nav="lobby">Lobby</button>
-      <div class="nav-dd">
-        <button class="nav-link nav-dd-btn" id="gamesMenuBtn" aria-haspopup="true">Games <span class="nav-caret">▾</span></button>
-        <div class="nav-menu" id="gamesMenu"></div>
-      </div>
-      <button class="nav-link" data-nav="aiguide">🤖 Guide</button>
-    </nav>
-
-    <div class="wallet">
-      <div class="wallet-chip">
-        <span class="wallet-icon">💵</span>
-        <span class="wallet-cur">$</span>
-        <span class="wallet-amount" id="walletAmount">0</span>
-      </div>
-      <div class="top-actions">
-        <button class="icon-btn" id="cheatBtn" title="Rig the odds in your favor">😈</button>
-        <button class="icon-btn" id="muteBtn" title="Toggle sound">🔊</button>
-        <button class="icon-btn" id="resetBtn" title="Reset your balance">↺</button>
-      </div>
-      <button class="btn btn-sm" id="addFundsBtn" title="Add simulated cash">+ Cash</button>
-    </div>
-  </header>
-
-  <main id="view" class="view"><!-- rendered by JS --></main>
-
-  <footer class="footer">
-    <span>Royal Casino · play-money demo · simulated dollars only, no real currency</span>
-  </footer>
+  <!-- Mobile sidebar scrim -->
+  <div class="sb-scrim" id="sbScrim"></div>
 
   <!-- Toasts -->
   <div class="toast-wrap" id="toastWrap"></div>
 
+  <!-- Vendored libraries (UMD, no build step — see DEVELOPMENT_GUIDE.md) -->
+  <script src="js/vendor/lucide.min.js?v=66"></script>
+  <script src="js/vendor/gsap.min.js?v=66"></script>
+  <script src="js/vendor/countUp.umd.js?v=66"></script>
+  <script src="js/vendor/confetti.browser.min.js?v=66"></script>
+
   <!-- Scripts -->
-  <script src="js/core.js?v=35"></script>
-  <script src="js/games/slots.js?v=35"></script>
-  <script src="js/games/gems.js?v=35"></script>
-  <script src="js/games/blackjack.js?v=35"></script>
-  <script src="js/games/videopoker.js?v=35"></script>
-  <script src="js/games/roulette.js?v=35"></script>
-  <script src="js/games/dice.js?v=35"></script>
-  <script src="js/games/mines.js?v=35"></script>
-  <script src="js/games/crash.js?v=35"></script>
-  <script src="js/games/limbo.js?v=35"></script>
-  <script src="js/games/plinko.js?v=35"></script>
-  <script src="js/games/hilo.js?v=35"></script>
-  <script src="js/games/tower.js?v=35"></script>
-  <script src="js/games/wheel.js?v=35"></script>
-  <script src="js/games/chicken.js?v=35"></script>
-  <script src="js/games/holdem.js?v=35"></script>
-  <script src="js/games/baccarat.js?v=35"></script>
-  <script src="js/games/threecard.js?v=35"></script>
-  <script src="js/games/casinowar.js?v=35"></script>
-  <script src="js/games/reddog.js?v=35"></script>
-  <script src="js/games/battleship.js?v=35"></script>
-  <script src="js/games/moles.js?v=35"></script>
-  <script src="js/games/snakes.js?v=35"></script>
-  <script src="js/games/coinflip.js?v=35"></script>
-  <script src="js/games/rps.js?v=35"></script>
-  <script src="js/games/keno.js?v=35"></script>
-  <script src="js/app.js?v=35"></script>
+  <script src="js/core.js?v=66"></script>
+  <script src="js/games/slots.js?v=66"></script>
+  <script src="js/games/gems.js?v=66"></script>
+  <script src="js/games/blackjack.js?v=66"></script>
+  <script src="js/games/videopoker.js?v=66"></script>
+  <script src="js/games/roulette.js?v=66"></script>
+  <script src="js/games/dice.js?v=66"></script>
+  <script src="js/games/mines.js?v=66"></script>
+  <script src="js/games/crash.js?v=66"></script>
+  <script src="js/games/limbo.js?v=66"></script>
+  <script src="js/games/plinko.js?v=66"></script>
+  <script src="js/games/hilo.js?v=66"></script>
+  <script src="js/games/tower.js?v=66"></script>
+  <script src="js/games/wheel.js?v=66"></script>
+  <script src="js/games/chicken.js?v=66"></script>
+  <script src="js/games/holdem.js?v=66"></script>
+  <script src="js/games/baccarat.js?v=66"></script>
+  <script src="js/games/threecard.js?v=66"></script>
+  <script src="js/games/casinowar.js?v=66"></script>
+  <script src="js/games/reddog.js?v=66"></script>
+  <script src="js/games/battleship.js?v=66"></script>
+  <script src="js/games/moles.js?v=66"></script>
+  <script src="js/games/snakes.js?v=66"></script>
+  <script src="js/games/coinflip.js?v=66"></script>
+  <script src="js/games/rps.js?v=66"></script>
+  <script src="js/games/keno.js?v=66"></script>
+  <script src="js/app.js?v=66"></script>
   <!-- AI agent harness (optional; safe to remove) -->
-  <script src="js/agent/harness.js?v=35"></script>
-  <script src="js/agent/agent-ui.js?v=35"></script>
-  <script src="js/agent/agent-report.js?v=35"></script>
-  <script src="js/agent/agent-lab.js?v=35"></script>
+  <script src="js/agent/harness.js?v=66"></script>
+  <script src="js/agent/agent-ui.js?v=66"></script>
+  <script src="js/agent/agent-report.js?v=66"></script>
+  <script src="js/agent/agent-lab.js?v=66"></script>
 </body>
 </html>

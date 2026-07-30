@@ -41,7 +41,7 @@ const CoinflipGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🪙 Coinflip</h2>
+        <h2 class="page-title">${Casino.icon("circle-dollar-sign", "ico-title")} Coinflip</h2>
         <p class="page-sub">Call it right and compound your stake ${payoutFor(1)}× per flip. Cash out or push your streak — one wrong call ends it. Flip up to 3 coins for bigger jumps.</p>
         ${Casino.helpBtnHTML("cfHelp")}
       </div>
@@ -67,8 +67,8 @@ const CoinflipGame = (() => {
             </div>
           </div>
           <div class="cf-pick" id="cfPick" style="margin-top:14px;">
-            <button class="btn btn-block btn-blue" id="cfHeads" style="font-size:16px;padding:14px;">🙂 Heads</button>
-            <button class="btn btn-block btn-purple" id="cfTails" style="font-size:16px;padding:14px;margin-top:10px;">👑 Tails</button>
+            <button class="btn btn-block btn-blue" id="cfHeads" style="font-size:16px;padding:14px;">Heads</button>
+            <button class="btn btn-block btn-purple" id="cfTails" style="font-size:16px;padding:14px;margin-top:10px;">Tails</button>
           </div>
           <button class="btn btn-block btn-green" id="cfCash" style="margin-top:10px;font-size:16px;padding:14px;display:none;">Cash Out</button>
           <div class="stat-grid" style="margin-top:16px;">
@@ -92,22 +92,64 @@ const CoinflipGame = (() => {
       view.querySelectorAll("#cfCoinSel .btn").forEach((x) => x.classList.toggle("sel", x === b));
     }));
 
-    const faceIcon = (f) => (f ? "🙂" : "👑");
-    function renderCoins(faces) {
-      view.querySelector("#cfCoins").innerHTML = (faces || Array(coins).fill(null))
-        .map((f) => `<div class="cf-coin ${f == null ? "" : f ? "heads" : "tails"}">${f == null ? "?" : faceIcon(f)}</div>`).join("");
+    /* The coin is built from CSS (radial gradients + a milled rim); the face is
+       an engraved mark, not a glyph. `.cf-face` is the 3D-rotating element so
+       the outer .cf-coin keeps its layout box for the agent's DOM reads. */
+    /* A real two-sided coin: .cf-flip is the preserve-3d rotator carrying two
+       absolutely-positioned faces, the back pre-rotated 180deg, both with
+       backface-visibility hidden. Landing on tails means stopping on an odd
+       half-turn, so the reverse is genuinely what you see — no face swapping. */
+    function coinHTML(f) {
+      const state = f == null ? "idle" : f ? "heads" : "tails";
+      return `<div class="cf-coin ${state}">
+          <div class="cf-flip">
+            <div class="cf-face cf-front">${f == null
+              ? `<span class="cf-mark cf-mark-q"></span>`
+              : `<span class="cf-mark cf-mark-h"></span>`}</div>
+            <div class="cf-face cf-back"><span class="cf-mark cf-mark-t"></span></div>
+          </div>
+        </div>`;
+    }
+
+    function renderCoins(faces, animate) {
+      const wrap = view.querySelector("#cfCoins");
+      const list = faces || Array(coins).fill(null);
+      wrap.innerHTML = list.map(coinHTML).join("");
+
+      const flips = [...wrap.querySelectorAll(".cf-flip")];
+      const g = window.gsap;
+      const still = !animate || !faces || !g || (Casino.fx && Casino.fx.reduced());
+
+      // Heads rests at 0deg (front showing), tails at 180deg (back showing).
+      if (still) {
+        flips.forEach((el, i) => {
+          if (list[i] != null) el.style.transform = `rotateY(${list[i] ? 0 : 180}deg)`;
+        });
+        return;
+      }
+
+      flips.forEach((el, i) => {
+        const spins = 3;                                  // whole turns before settling
+        const end = spins * 360 + (list[i] ? 0 : 180);
+        g.timeline({ delay: i * 0.08 })
+          .fromTo(el, { rotateY: 0 }, { rotateY: end, duration: 0.9, ease: "power4.out" })
+          // scale lives on the OUTER coin so it never composes with the
+          // rotation matrix and skew the faces
+          .to(el.parentElement, { scale: 1.16, duration: 0.36, ease: "power2.out" }, 0)
+          .to(el.parentElement, { scale: 1, duration: 0.5, ease: "back.out(1.7)" }, 0.36);
+      });
     }
     function renderFair() {
       const el = view.querySelector("#cfFair");
       el.innerHTML = phase === "over"
-        ? `🔓 Revealed · server <code>${server}</code> · hash <code>${seedHash(server)}</code>`
-        : `🔒 Provably fair · committed hash <code>${seedHash(server)}</code> · nonce ${nonce}`;
+        ? `Revealed · server <code>${server}</code> · hash <code>${seedHash(server)}</code>`
+        : `Provably fair · committed hash <code>${seedHash(server)}</code> · nonce ${nonce}`;
     }
     function pushHist(win, faces) {
       const el = view.querySelector("#cfHist");
       const d = document.createElement("div");
       d.className = "cf-hist-item " + (win ? "win" : "lose");
-      d.textContent = faces.map(faceIcon).join("");
+      d.innerHTML = faces.map((f) => `<i class="cf-pip ${f ? "h" : "t"}"></i>`).join("");
       el.prepend(d); while (el.children.length > 12) el.removeChild(el.lastChild);
     }
     function refresh() {
@@ -135,7 +177,7 @@ const CoinflipGame = (() => {
       let faces = Array.from({ length: coins }, (_, i) => coinFace(server, client, nonce, streak * 10 + i));
       // 😈 rig: make every coin match the pick
       if (Casino.cheat.win()) faces = faces.map(() => pick);
-      renderCoins(faces);
+      renderCoins(faces, true);
       const win = faces.every((f) => f === pick);
       pushHist(win, faces);
       if (win) {

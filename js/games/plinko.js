@@ -49,7 +49,7 @@ const PlinkoGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🟡 Plinko</h2>
+        <h2 class="page-title">${Casino.icon("git-fork", "ico-title")} Plinko</h2>
         <p class="page-sub">Drop the ball and let it bounce down the pegs. Edge slots pay huge but are rare;
           the middle pays under 1×. Pick your risk and rows, then drop as many as you like.</p>
         ${Casino.helpBtnHTML("plinkoHelp")}
@@ -245,7 +245,9 @@ const PlinkoGame = (() => {
         }
         beginSegment(ball);
       }
-      if (ball.squash > 0) ball.squash = Math.max(0, ball.squash - dt * 5);
+      // Decay fast: the squash should be a flick on impact, not a state the
+      // ball lives in between pegs.
+      if (ball.squash > 0) ball.squash = Math.max(0, ball.squash - dt * 11);
     }
 
     function pingNearestPeg(x, y) {
@@ -326,20 +328,29 @@ const PlinkoGame = (() => {
 
       // balls
       for (const ball of balls) {
+        /* Deformation is deliberately slight. At the old ±35% the ball read as
+           a pancake through the whole cascade instead of a solid bearing
+           clacking off pegs; 8% is enough to register the impact while the
+           silhouette stays convincingly circular. */
         const sq = ball.squash;
-        const rx = ballR * (1 + sq * 0.35);
-        const ry = ballR * (1 - sq * 0.35);
-        const grad = ctx.createRadialGradient(ball.x - rx * 0.3, ball.y - ry * 0.3, ry * 0.2, ball.x, ball.y, rx);
-        grad.addColorStop(0, "#fff4cf");
-        grad.addColorStop(0.5, "#f6d97a");
-        grad.addColorStop(1, "#e6c15a");
+        const rx = ballR * (1 + sq * 0.08);
+        const ry = ballR * (1 - sq * 0.08);
+        const grad = ctx.createRadialGradient(ball.x - rx * 0.34, ball.y - ry * 0.36, ry * 0.15, ball.x, ball.y, rx * 1.05);
+        grad.addColorStop(0, "#fffaf0");
+        grad.addColorStop(0.42, "#ffdc86");
+        grad.addColorStop(1, "#d9a52e");
         ctx.beginPath();
         ctx.ellipse(ball.x, ball.y, rx, ry, 0, 0, Math.PI * 2);
         ctx.fillStyle = grad;
-        ctx.shadowColor = "rgba(230,193,90,0.6)";
-        ctx.shadowBlur = 8;
+        ctx.shadowColor = "rgba(240,194,79,0.75)";
+        ctx.shadowBlur = 12;
         ctx.fill();
         ctx.shadowBlur = 0;
+        // tight specular dot — sells "polished sphere" far better than a squash
+        ctx.beginPath();
+        ctx.arc(ball.x - rx * 0.33, ball.y - ry * 0.36, Math.max(1, ballR * 0.2), 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,255,255,0.75)";
+        ctx.fill();
       }
     }
 

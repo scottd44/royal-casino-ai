@@ -135,7 +135,7 @@ const BattleshipGame = (() => {
 
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">🚢 Battleship</h2>
+        <h2 class="page-title">${Casino.icon("ship", "ico-title")} Battleship</h2>
         <p class="page-sub">Your bet buys ${SHOTS} shots at a hidden fleet. Hit pieces to build a multiplier, sink ships for big bonuses, and sink the whole fleet for the ${GRAND}× jackpot. No bust — cash out any time.</p>
         ${Casino.helpBtnHTML("bsHelp")}
       </div>
@@ -149,7 +149,7 @@ const BattleshipGame = (() => {
         </div>
         <div class="panel">
           ${Casino.betFieldHTML(25)}
-          <button class="btn btn-block btn-green" id="bsDeal" style="margin-top:14px;font-size:16px;padding:14px;">🚀 Open Fire (${SHOTS} shots)</button>
+          <button class="btn btn-block btn-green" id="bsDeal" style="margin-top:14px;font-size:16px;padding:14px;">${Casino.icon("crosshair")} Open Fire (${SHOTS} shots)</button>
           <div class="hc-actrow" id="bsActRow" style="margin-top:10px;display:none;">
             <button class="btn btn-blue" id="bsBuy">Buy Shot</button>
             <button class="btn btn-green" id="bsCash">Cash Out</button>
@@ -198,9 +198,9 @@ const BattleshipGame = (() => {
     function renderFair() {
       const el = view.querySelector("#bsFair");
       if (phase === "over" && board) {
-        el.innerHTML = `🔓 <b>Round #${nonce} verified.</b> Server seed: <code>${server}</code> · client <code>${client}</code> · hash <code>${seedHash(server)}</code>`;
+        el.innerHTML = `<b>Round #${nonce} verified.</b> Server seed: <code>${server}</code> · client <code>${client}</code> · hash <code>${seedHash(server)}</code>`;
       } else {
-        el.innerHTML = `🔒 Provably fair · committed hash <code>${seedHash(server)}</code> · client <code>${client}</code> · nonce ${nonce}`;
+        el.innerHTML = `Provably fair · committed hash <code>${seedHash(server)}</code> · client <code>${client}</code> · nonce ${nonce}`;
       }
     }
 
@@ -317,9 +317,9 @@ const BattleshipGame = (() => {
         if (ship.hit === ship.size) {
           ship.sunk = true; sunkCount++; mult += ship.sink;
           ship.cells.forEach(([rr, cc]) => (shots[rr][cc] = 3));
-          log(`💥 Sank the ${ship.name}! +${ship.sink}× (${coord(r, c)})`, "win");
+          log(`Sank the ${ship.name}! +${ship.sink}× (${coord(r, c)})`, "win");
           Casino.sound.play("cashout");
-          if (sunkCount === FLEET.length) { mult += GRAND; log(`🏆 WHOLE FLEET SUNK! +${GRAND}× GRAND JACKPOT!`, "win"); Casino.sound.play("bigwin"); paint(); refresh(); cashOut(true); return; }
+          if (sunkCount === FLEET.length) { mult += GRAND; log(`WHOLE FLEET SUNK! +${GRAND}× GRAND JACKPOT!`, "win"); Casino.sound.play("bigwin"); paint(); refresh(); cashOut(true); return; }
         } else { log(`Hit at ${coord(r, c)} +${BASE}×`); Casino.sound.play("tick"); }
       } else { shots[r][c] = 1; log(`Miss at ${coord(r, c)}.`); Casino.sound.play("click"); }
       if (shotsLeft === 0) shotPrice = priceExtraShot();
@@ -353,7 +353,7 @@ const BattleshipGame = (() => {
       if (!auto) Casino.sound.play(net > 0 ? "win" : "lose");
       nonce++;
       paint(); refresh();
-      dealBtn.textContent = `🚀 Open Fire (${SHOTS} shots)`;
+      dealBtn.innerHTML = `${Casino.icon("crosshair")} Open Fire (${SHOTS} shots)`;
     }
 
     dealBtn.addEventListener("click", deal);

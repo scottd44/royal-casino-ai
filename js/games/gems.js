@@ -9,14 +9,17 @@
    ============================================================ */
 const GemsGame = (() => {
   // pay is per line, on the total bet split across 5 lines.
+  /* Lines are matched on grid INDEX (g[i]), never on `s`, so `s` is purely a
+     render key here. Each gem is a CSS-drawn facet — no emoji table involved. */
   const SYMBOLS = [
-    { s: "💎", name: "Diamond",  w: 2,  pay: 240 },
-    { s: "⭐", name: "Star",     w: 3,  pay: 117 },
-    { s: "🔮", name: "Orb",      w: 4,  pay: 62 },
-    { s: "🟣", name: "Amethyst", w: 6,  pay: 30 },
-    { s: "🔷", name: "Sapphire", w: 8,  pay: 18 },
-    { s: "🟢", name: "Emerald",  w: 11, pay: 10.7 },
+    { s: "diamond",  name: "Diamond",  w: 2,  pay: 240 },
+    { s: "star",     name: "Star",     w: 3,  pay: 117 },
+    { s: "orb",      name: "Orb",      w: 4,  pay: 62 },
+    { s: "amethyst", name: "Amethyst", w: 6,  pay: 30 },
+    { s: "sapphire", name: "Sapphire", w: 8,  pay: 18 },
+    { s: "emerald",  name: "Emerald",  w: 11, pay: 10.7 },
   ];
+  const gemHTML = (sym) => `<span class="gem gem-${sym.s}" title="${sym.name}"></span>`;
   const LINES = [
     { idx: [0, 1, 2], name: "Top row" },
     { idx: [3, 4, 5], name: "Middle row" },
@@ -36,7 +39,7 @@ const GemsGame = (() => {
   function render(view) {
     view.innerHTML = `
       <div class="page-head">
-        <h2 class="page-title">💎 Cosmic Gems</h2>
+        <h2 class="page-title">${Casino.icon("gem", "ico-title")} Cosmic Gems</h2>
         <p class="page-sub">A 3×3 gem slot with 5 paylines — three rows and both diagonals. Match three gems on any line; several lines can hit at once.</p>
         ${Casino.helpBtnHTML("gemsHelp")}
       </div>
@@ -50,7 +53,7 @@ const GemsGame = (() => {
           <div class="divider"></div>
           <div class="paytable">
             <table>
-              ${SYMBOLS.map((s) => `<tr><td>${s.s} ${s.s} ${s.s} <span style="color:var(--muted)">${s.name}</span></td><td>${s.pay}×</td></tr>`).join("")}
+              ${SYMBOLS.map((s) => `<tr><td>${gemHTML(s).repeat(3)} <span style="color:var(--muted)">${s.name}</span></td><td>${s.pay}×</td></tr>`).join("")}
             </table>
           </div>
         </div>
@@ -58,7 +61,7 @@ const GemsGame = (() => {
         <div class="panel">
           <p class="controls-title">Place your bet</p>
           ${Casino.betFieldHTML(20)}
-          <button class="btn btn-block btn-purple" id="gemSpinBtn" style="font-size:17px;padding:15px;">SPIN 💎</button>
+          <button class="btn btn-block btn-purple" id="gemSpinBtn" style="font-size:17px;padding:15px;">SPIN</button>
           <div class="stat-grid" style="margin-top:16px;">
             <div class="stat"><div class="k">Lines hit</div><div class="v" id="linesHit">—</div></div>
             <div class="stat"><div class="k">Last win</div><div class="v" id="lastWin">—</div></div>
@@ -89,7 +92,7 @@ const GemsGame = (() => {
     // Build 9 cells.
     let cells = [];
     for (let i = 0; i < 9; i++) {
-      const c = Casino.el("div", "gem-cell", "💠");
+      const c = Casino.el("div", "gem-cell", `<span class="gem gem-blank"></span>`);
       c.dataset.idx = i;
       grid.appendChild(c);
       cells.push(c);
@@ -134,13 +137,13 @@ const GemsGame = (() => {
 
       const locked = new Set();
       const anim = setInterval(() => {
-        cells.forEach((c, i) => { if (!locked.has(i)) c.textContent = SYMBOLS[drawIdx()].s; });
+        cells.forEach((c, i) => { if (!locked.has(i)) c.innerHTML = gemHTML(SYMBOLS[drawIdx()]); });
       }, 60);
 
       // Reveal column by column (cells c, c+3, c+6).
       [0, 1, 2].forEach((col) => {
         setTimeout(() => {
-          [col, col + 3, col + 6].forEach((i) => { locked.add(i); cells[i].textContent = SYMBOLS[g[i]].s; });
+          [col, col + 3, col + 6].forEach((i) => { locked.add(i); cells[i].innerHTML = gemHTML(SYMBOLS[g[i]]); });
           Casino.sound.play("tick");
           if (col === 2) { clearInterval(anim); finish(g, betAmount); }
         }, 520 + col * 340);
@@ -155,7 +158,7 @@ const GemsGame = (() => {
         r.winCells.forEach((i) => cells[i].classList.add("win"));
         const big = r.win >= betAmount * 15;
         Casino.sound.play(big ? "bigwin" : "win");
-        banner.textContent = `${r.hit.length} line${r.hit.length > 1 ? "s" : ""} · +${Casino.fmt(r.win)} 🎉`;
+        banner.textContent = `${r.hit.length} line${r.hit.length > 1 ? "s" : ""} · +${Casino.fmt(r.win)}`;
         Casino.toast(`${r.hit.length} line win — +${Casino.fmt(r.win)}!`, "win");
         view.querySelector("#lastWin").textContent = "+" + Casino.fmt(r.win);
         if (r.win > bestWin) { bestWin = r.win; view.querySelector("#bestWin").textContent = Casino.fmt(bestWin); }
