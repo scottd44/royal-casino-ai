@@ -7,6 +7,7 @@ import { Felt } from '../../components/Felt'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money, randInt } from '@/platform/money/format'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
    Snakes — ported from js/games/snakes.js.
@@ -90,6 +91,12 @@ type Landed = { kind: 'safe'; step: number } | { kind: 'snake' }
 
 export default function SnakesGame() {
   const betRef = useBetRef()
+  // The ring's own fixed maxWidth/padding/font sizes (the center dice
+  // readout especially) were sized for desktop — on a narrow phone panel
+  // they push the board wider than the viewport. Shrinking those values on
+  // mobile keeps the same single ring layout, just smaller; no tile/token
+  // markup or ids change.
+  const isMobile = useIsMobile()
 
   // Round truth lives in refs — window.SnakesAPI's functions (esp. busy())
   // must read the CURRENT state synchronously when the agent polls them,
@@ -347,23 +354,24 @@ export default function SnakesGame() {
               space — same "board deserves a surface" treatment the card
               games get from Felt.tsx. Felt itself carries no agent
               contract; #snBoard below still owns detect()'s other half. */}
-          <Felt className="flex justify-center p-6 sm:p-9">
+          <Felt className={isMobile ? 'flex justify-center p-3' : 'flex justify-center p-6 sm:p-9'}>
             {/* #snBoard is half of detect(). Layout is a ring, not a grid —
                 see the file-level note on why TileGrid doesn't apply here. */}
             <div
               id="snBoard"
               data-idx-container=""
-              className="grid gap-3"
+              className="grid"
               style={{
                 gridTemplateColumns: 'repeat(4, 1fr)',
                 gridTemplateRows: 'repeat(4, 1fr)',
                 aspectRatio: '1 / 1',
                 width: '100%',
-                maxWidth: 620,
+                maxWidth: isMobile ? 320 : 620,
+                gap: isMobile ? 6 : 12,
                 background:
                   'radial-gradient(120% 100% at 50% 0%, rgba(34,229,154,0.1), transparent 62%), linear-gradient(180deg, rgba(10,15,24,0.9), rgba(6,9,15,0.95))',
                 borderRadius: 24,
-                padding: 14,
+                padding: isMobile ? 8 : 14,
                 border: '1px solid rgba(255,255,255,0.06)',
                 boxShadow: 'inset 0 0 60px rgba(0,0,0,0.7), var(--lift-2)',
               }}
@@ -403,7 +411,13 @@ export default function SnakesGame() {
                       opacity: v.faint ? 0.4 : 1,
                     }}
                   >
-                    <span className="absolute top-1.5 left-2 text-[11px] font-semibold text-faint tabular-nums">
+                    <span
+                      className={
+                        isMobile
+                          ? 'absolute top-1 left-1 text-[9px] font-semibold text-faint tabular-nums'
+                          : 'absolute top-1.5 left-2 text-[11px] font-semibold text-faint tabular-nums'
+                      }
+                    >
                       {i + 1}
                     </span>
                     {/* The tile itself never unmounts across a round — only
@@ -412,14 +426,17 @@ export default function SnakesGame() {
                         same rule Mines' `.tile` follows. */}
                     {v.kind === 'safe' && (
                       <Reveal as="span" preset="scaleIn" duration={0.18}>
-                        <span className="num text-base font-extrabold" style={{ color: 'var(--color-green)' }}>
+                        <span
+                          className={isMobile ? 'num text-[11px] font-extrabold' : 'num text-base font-extrabold'}
+                          style={{ color: 'var(--color-green)' }}
+                        >
                           ×{(v.step ?? 1).toFixed(2)}
                         </span>
                       </Reveal>
                     )}
                     {v.kind === 'snake' && (
                       <Reveal as="span" preset="scaleIn" duration={0.18}>
-                        <Icon name="rc:snake" size={26} style={{ color: 'var(--color-red)' }} />
+                        <Icon name="rc:snake" size={isMobile ? 18 : 26} style={{ color: 'var(--color-red)' }} />
                       </Reveal>
                     )}
                     {/* The player's token — a real piece riding the loop,
@@ -431,7 +448,11 @@ export default function SnakesGame() {
                         as="span"
                         preset="scaleIn"
                         duration={0.16}
-                        className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border-2"
+                        className={
+                          isMobile
+                            ? 'absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-2'
+                            : 'absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border-2'
+                        }
                         style={{
                           borderColor: 'var(--color-panel)',
                           background: 'radial-gradient(circle at 35% 30%, var(--color-gold-2), var(--color-gold))',
@@ -452,11 +473,16 @@ export default function SnakesGame() {
                   boxShadow: 'inset 0 0 30px rgba(0,0,0,0.5)',
                 }}
               >
-                <div className="flex gap-3 text-5xl leading-none" style={{ color: 'var(--color-gold-2)' }}>
+                <div
+                  className={isMobile ? 'flex gap-1 text-2xl leading-none' : 'flex gap-3 text-5xl leading-none'}
+                  style={{ color: 'var(--color-gold-2)' }}
+                >
                   <span>{DICE_FACE[d1 - 1]}</span>
                   <span>{DICE_FACE[d2 - 1]}</span>
                 </div>
-                <div className="text-sm font-semibold text-muted">{total != null ? `Total ${total}` : 'Total —'}</div>
+                <div className={isMobile ? 'text-[11px] font-semibold text-muted' : 'text-sm font-semibold text-muted'}>
+                  {total != null ? `Total ${total}` : 'Total —'}
+                </div>
               </div>
             </div>
           </Felt>

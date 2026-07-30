@@ -6,6 +6,7 @@ import BetField, { useBetRef, readBet } from '../../components/BetField'
 import AgentMount from '../../components/AgentMount'
 import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money, randInt, pick } from '@/platform/money/format'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
    Tower — ported from js/games/tower.js.
@@ -116,6 +117,15 @@ function cellState(truth: CellTruth, c: number, hitCol: number | undefined): Til
 export default function TowerGame() {
   const betRef = useBetRef()
   const diffSelectRef = useRef<HTMLSelectElement>(null)
+  // Fixed px tiles (see the comment above the tower-grid div) were sized for
+  // desktop — 4 tiles/row at 68px plus gaps overflows a phone-width panel.
+  // Shrinking the tile/gap/icon size on narrow viewports keeps the same
+  // fixed-size-tile approach (still no per-row stretch) without ever
+  // touching the tile markup, ids, or click contract.
+  const isMobile = useIsMobile()
+  const tileSize = isMobile ? 52 : 68
+  const tileGap = isMobile ? 6 : 10
+  const tileIconSize = isMobile ? 20 : 24
 
   const [diff, setDiff] = useState<DiffKey>('easy')
   const [tileDisplay, setTileDisplay] = useState<TileState[][]>(() => buildEmptyDisplay(DIFFS.easy))
@@ -287,7 +297,11 @@ export default function TowerGame() {
               `maxWidth`-cap pattern in spirit — just applied to tile size
               instead of grid width, since Tower is row-grouped rather than
               one flat field. */}
-          <div className="tower-grid flex flex-col gap-2.5 mx-auto" id="towerGrid" style={{ maxWidth: 420 }}>
+          <div
+            className="tower-grid flex flex-col mx-auto"
+            id="towerGrid"
+            style={{ maxWidth: 420, gap: tileGap }}
+          >
             {rowOrder.map((r) => {
               const isActiveRow = active && r === cleared
               const isLocked = active && r > cleared
@@ -296,12 +310,13 @@ export default function TowerGame() {
                   key={r}
                   data-row={r}
                   className={[
-                    'tower-row flex gap-2.5 justify-center',
+                    'tower-row flex justify-center',
                     isActiveRow ? 'active' : '',
                     isLocked ? 'locked opacity-40' : '',
                   ]
                     .filter(Boolean)
                     .join(' ')}
+                  style={{ gap: tileGap }}
                 >
                   {tileDisplay[r].map((st, c) => {
                     const revealed = st !== 'hidden'
@@ -334,8 +349,8 @@ export default function TowerGame() {
                           .filter(Boolean)
                           .join(' ')}
                         style={{
-                          width: 68,
-                          height: 68,
+                          width: tileSize,
+                          height: tileSize,
                           borderColor: 'var(--glass-line)',
                           background: isGem
                             ? 'color-mix(in srgb, var(--color-green) 18%, transparent)'
@@ -347,12 +362,12 @@ export default function TowerGame() {
                       >
                         {isGem && (
                           <Reveal as="span" preset="scaleIn" duration={0.18}>
-                            <Icon name="gem" size={24} style={{ color: 'var(--color-green)' }} />
+                            <Icon name="gem" size={tileIconSize} style={{ color: 'var(--color-green)' }} />
                           </Reveal>
                         )}
                         {isMine && (
                           <Reveal as="span" preset="scaleIn" duration={0.18}>
-                            <Icon name="bomb" size={24} style={{ color: 'var(--color-red)' }} />
+                            <Icon name="bomb" size={tileIconSize} style={{ color: 'var(--color-red)' }} />
                           </Reveal>
                         )}
                       </button>

@@ -7,6 +7,7 @@ import { useWalletStore, cheatWin } from '@/platform/money/walletStore'
 import { fmt, money } from '@/platform/money/format'
 import { toast } from '@/platform/ui/toast'
 import { SYMBOLS, SymbolArt, type SlotSymbol } from './Symbols'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 
 /* ============================================================
    Slots ("Lucky Sevens Slots") — ported from js/games/slots.js. 3 reels,
@@ -95,6 +96,9 @@ type SpinRecord = { id: number; win: number }
 
 export default function SlotsGame() {
   const betRef = useBetRef()
+  const isMobile = useIsMobile()
+  const symbolH = isMobile ? 76 : SYMBOL_H
+  const symbolArtSize = isMobile ? 46 : 64
   const spinningRef = useRef(false)
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const historyIdRef = useRef(0)
@@ -186,7 +190,7 @@ export default function SlotsGame() {
     setReels(finals.map((sym) => ({ strip: buildStrip(sym), y: 0, animate: false, settled: false })))
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        setReels((prev) => prev.map((r) => ({ ...r, y: -(STRIP_FILL * SYMBOL_H), animate: true })))
+        setReels((prev) => prev.map((r) => ({ ...r, y: -(STRIP_FILL * symbolH), animate: true })))
       })
     })
 
@@ -252,7 +256,7 @@ export default function SlotsGame() {
                     data-reel
                     className="reel-window relative overflow-hidden rounded-lg"
                     style={{
-                      height: SYMBOL_H,
+                      height: symbolH,
                       background: 'radial-gradient(circle at 50% 28%, rgba(255,255,255,0.10), rgba(0,0,0,0.5) 72%)',
                       border: isWinner ? '1px solid var(--color-gold)' : '1px solid rgba(255,255,255,0.08)',
                       boxShadow: isWinner
@@ -276,9 +280,9 @@ export default function SlotsGame() {
                           <div
                             key={j}
                             className="flex items-center justify-center"
-                            style={{ height: SYMBOL_H }}
+                            style={{ height: symbolH }}
                           >
-                            <SymbolArt sym={sym.s} size={64} glow={isFinal && isWinner} />
+                            <SymbolArt sym={sym.s} size={symbolArtSize} glow={isFinal && isWinner} />
                           </div>
                         )
                       })}

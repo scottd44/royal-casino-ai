@@ -57,6 +57,11 @@ export interface TileGridProps<T> {
    *  are always clickable — some future consumer may prefer fully custom
    *  click handling wired inside `renderTile` itself instead of this prop. */
   disabled?: (tile: T, index: number) => boolean
+  /** Optional gap override, in px — defaults to the `gap-2` (8px) class
+   *  below via inline style so a caller (e.g. Keno on a narrow phone
+   *  viewport) can tighten the grid to keep tiles above a comfortable tap
+   *  size without touching the shared structural class. */
+  gapPx?: number
 }
 
 /** Mines' own tile base classes (MinesGame.tsx's `.tile` button), copied
@@ -78,6 +83,7 @@ export function TileGrid<T>({
   tileClassName,
   onTileClick,
   disabled,
+  gapPx,
 }: TileGridProps<T>): JSX.Element {
   return (
     // `data-idx-container` is a cheap, greppable marker that this div's
@@ -85,7 +91,12 @@ export function TileGrid<T>({
     // read by any adapter today, but costs nothing and saves a future
     // porter from guessing which wrapping div is the "real" one on a page
     // with nested layout divs.
-    <div id={id} data-idx-container="" className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+    <div
+      id={id}
+      data-idx-container=""
+      className="grid gap-2"
+      style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, ...(gapPx != null ? { gap: gapPx } : {}) }}
+    >
       {tiles.map((tile, i) => (
         <button
           key={i}

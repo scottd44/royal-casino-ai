@@ -8,6 +8,7 @@ import { LabDrawer, LAB_HANDLE_PX } from '@/modules/casino/lab/LabDrawer'
 import { LabHud } from '@/modules/casino/lab/LabHud'
 import { LabReportModal } from '@/modules/casino/lab/LabReportModal'
 import { useLabUiStore } from '@/modules/casino/lab/labUiStore'
+import { useIsMobile } from '@/platform/layout/useMediaQuery'
 // LabDrawer/LabHud below are now the always-mounted component that keeps
 // `royalAgent` (platform/agent/agentUi.ts) alive — it's constructed at
 // module-eval time, not on first render, so importing it transitively
@@ -33,7 +34,12 @@ import { useLabUiStore } from '@/modules/casino/lab/labUiStore'
    ONE STATE, ONE WRITER: `collapsed` lives here and nothing else writes it.
    ============================================================ */
 export default function AppShell({ children }: { children: ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [userCollapsed, setUserCollapsed] = useState(false)
+  const isMobile = useIsMobile()
+  // Phones always get the icon-only rail — [data-nav] stays mounted and
+  // visible (Sidebar.tsx's agent contract), just narrower, same as the
+  // desktop collapsed state. Desktop keeps its own manual toggle.
+  const collapsed = isMobile || userCollapsed
   const balance = useWalletStore((s) => s.balance)
 
   // No boot effect needed anymore (plan §6) — `royalAgent` is a real ES
@@ -78,7 +84,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             type="button"
             id="sbCollapse"
             aria-label="Toggle sidebar"
-            onClick={() => setCollapsed((c) => !c)}
+            onClick={() => setUserCollapsed((c) => !c)}
             className="p-2 rounded-[10px] text-muted hover:text-text hover:bg-white/5 transition-colors"
           >
             <Icon name="panel-left" size={18} />
