@@ -28,6 +28,7 @@ import { OllamaAgent, OllamaAgentError } from './harness'
 import { fmt, money, pick, randInt } from '@/platform/money/format'
 import { wallet } from '@/platform/money/walletStore'
 import { toast } from '@/platform/ui/toast'
+import { speak, stopSpeaking } from '@/platform/audio/voice'
 import type {
   AgentRound,
   AgentSettings,
@@ -312,6 +313,14 @@ export function createRoyalAgent(): RoyalAgent {
     ev.t = ev.t || Date.now()
     log.push(ev)
     saveLog()
+    // Speak the AI's own trash-talk line live, the same moment it lands in
+    // the log LabLog.tsx renders from — 'move' and 'loan' are the only two
+    // kinds that carry a real `reason` (pushMove()/the desperate-measures
+    // path above both populate it; every other kind's `reason` field, if
+    // present at all, is empty).
+    if ((ev.kind === 'move' || ev.kind === 'loan') && typeof ev.reason === 'string' && ev.reason) {
+      speak(ev.reason)
+    }
     onUpdate()
   }
 
@@ -1901,6 +1910,7 @@ export function createRoyalAgent(): RoyalAgent {
     } finally {
       running = false
       stopFlag = false
+      stopSpeaking()
       logEvent({ kind: 'session', phase: 'stop', trigger: pendingReportTrigger || lastStopReason || 'manual', balance: wallet.getBalance() })
       onUpdate()
     }
@@ -1913,7 +1923,7 @@ export function createRoyalAgent(): RoyalAgent {
   }
 
   function toggle(id?: string) {
-    if (running) { stopFlag = true; agent.abort(); setStatus('Stopping…') }
+    if (running) { stopFlag = true; agent.abort(); stopSpeaking(); setStatus('Stopping…') }
     else void runLoop(id)
   }
 

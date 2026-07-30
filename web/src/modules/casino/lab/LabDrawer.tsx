@@ -12,6 +12,8 @@ import { LabTiltMeter } from './LabTiltMeter'
 import { LabChart } from './LabChart'
 import { LabLog } from './LabLog'
 import { LabSys } from './LabSys'
+import { useVoiceStore } from '@/platform/audio/voiceStore'
+import { stopSpeaking } from '@/platform/audio/voice'
 
 /* ============================================================
    LabDrawer -- the AI control deck. Ported (behavior, not markup) from
@@ -137,6 +139,8 @@ export function LabDrawer() {
   const [delayMs, setDelayMsState] = useState(() => royalAgent.settings.delayMs)
   const [brainDial, setBrainDial] = useState(50) // legacy's own slider default, agent-lab.js:97
   const [emotionsOn, setEmotionsOn] = useState(() => royalAgent.settings.emotions)
+  const voiceOn = useVoiceStore((s) => s.enabled)
+  const toggleVoice = useVoiceStore((s) => s.toggleEnabled)
   const [compute, setComputeState] = useState<'gpu' | 'cpu'>(() => royalAgent.settings.compute)
   const [model, setModelState] = useState(() => royalAgent.settings.model)
   const [runN, setRunN] = useState(() => royalAgent.settings.runN)
@@ -405,6 +409,18 @@ export function LabDrawer() {
               </label>
               <LabTiltMeter />
             </div>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={voiceOn}
+                onChange={(e) => {
+                  toggleVoice()
+                  if (!e.target.checked) stopSpeaking()
+                }}
+              />
+              <Icon name="volume-2" size={14} /> Voice (speaks its trash talk)
+            </label>
 
             <div className="flex flex-col gap-1 text-xs text-muted">
               <span>Model</span>
