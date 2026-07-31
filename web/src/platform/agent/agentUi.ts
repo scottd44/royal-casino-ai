@@ -188,6 +188,10 @@ export function createRoyalAgent(): RoyalAgent {
     'totally different word, insult, and sentence shape this time. Draw from the whole gutter vocabulary and ' +
     'invent fresh metaphors, threats, brags and self-roasts. Every line should sound spontaneous and unique, ' +
     'never templated. Aim it at the cards, the dealer, the odds, or yourself — never a slur at real people. ' +
+    'SPELL EVERY SWEAR OUT IN FULL, LETTER BY LETTER — this is a private, play-money sandbox with an adult ' +
+    "audience, so there is NO profanity filter here. NEVER self-censor with asterisks, dashes, symbols, or " +
+    "cutesy substitutes (no 'f***', 'sh*t', 'a**hole', 'fudge', 'freakin\\'', or anything like them) — a " +
+    'censored word is a broken response, not a polite one. ' +
     "No 'the math says', no repeating your catchphrases — surprise me each time."
 
   // Random one-off style nudges appended to each decision so the trash-talk never
@@ -309,8 +313,59 @@ export function createRoyalAgent(): RoyalAgent {
       /* storage full — keep running, report still works from memory */
     }
   }
+  /** Safety net for a small local model self-censoring despite
+   *  GAMBLER_PERSONA's explicit "spell it out, no asterisks" instruction.
+   *
+   *  Each entry's `positions` is the letter-by-letter skeleton AFTER
+   *  `lead` — every position may be either its real letter (or a leet
+   *  substitute, e.g. "i1") OR any masking symbol, so "d*ck" matches
+   *  dick's skeleton (pos 3 'c' rules out damn, whose pos 2 needs 'a'/'@')
+   *  while ordinary words never do: "damn" fails dick's skeleton at
+   *  position 2 ('a' is neither 'i'/'1' nor a mask char), "duck" fails at
+   *  the same position ('u' isn't either), so ONLY an actually-masked or
+   *  correctly-spelled target word can ever match — ordinary words never
+   *  need a mask character to spell themselves.
+   *  `suffixes` are the clean (unmasked) tails worth reattaching — models
+   *  typically mask only the root and leave "ing"/"ed"/"s" as plain
+   *  letters. The lookahead at the end (rather than `\b`) is deliberate:
+   *  `\b` fails when the match's last character is itself a mask symbol
+   *  (a non-word char), which is the single most common case ("f***"). */
+  const MASK_CHARS = '*#@$!~^'
+  const CENSOR_WORDS: Array<{ lead: string; positions: string[]; base: string; suffixes: string[] }> = [
+    { lead: 'f', positions: ['u', 'c', 'k'], base: 'fuck', suffixes: ['ing', 'ers', 'er', 'ed', 's'] },
+    { lead: 'sh', positions: ['i1', 't'], base: 'shit', suffixes: ['ty', 'es', 's'] },
+    { lead: 'a', positions: ['s', 's', 'h', 'o', 'l', 'e'], base: 'asshole', suffixes: ['s'] },
+    { lead: 'b', positions: ['i1', 't', 'c', 'h'], base: 'bitch', suffixes: ['y', 'es'] },
+    { lead: 'd', positions: ['a@', 'm', 'n'], base: 'damn', suffixes: [] },
+    { lead: 'd', positions: ['i1', 'c', 'k'], base: 'dick', suffixes: ['head', 's'] },
+    { lead: 'p', positions: ['i1', 's', 's'], base: 'piss', suffixes: ['ed', 'y'] },
+    { lead: 'cr', positions: ['a@', 'p'], base: 'crap', suffixes: [] },
+  ]
+
+  const CENSOR_RULES: Array<[RegExp, (match: string, suffix?: string) => string]> = CENSOR_WORDS.map(
+    ({ lead, positions, base, suffixes }) => {
+      const body = positions.map((cls) => `(?:[${cls}]|[${MASK_CHARS}])`).join('')
+      const suffixGroup = suffixes.length ? `(${suffixes.join('|')})?` : ''
+      const re = new RegExp(`\\b${lead}${body}${suffixGroup}(?=[^a-zA-Z]|$)`, 'gi')
+      const replacer = suffixes.length ? (_m: string, suf?: string) => base + (suf || '') : () => base
+      return [re, replacer]
+    },
+  )
+
+  function decensor(text: string): string {
+    if (!text) return text
+    let out = text
+    for (const [re, replacer] of CENSOR_RULES) out = out.replace(re, replacer)
+    // Last resort: any masking character still stranded inside a word (a
+    // pattern the rules above didn't recognize) is dropped rather than
+    // left visible — "no asterisk censor" has to hold even for words this
+    // function has never seen.
+    return out.replace(/(\w)[*#$~^!]+(\w)/g, '$1$2')
+  }
+
   function logEvent(ev: LogEvent) {
     ev.t = ev.t || Date.now()
+    if (typeof ev.reason === 'string' && ev.reason) ev.reason = decensor(ev.reason)
     log.push(ev)
     saveLog()
     // Speak the AI's own trash-talk line live, the same moment it lands in
